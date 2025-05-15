@@ -29,6 +29,10 @@ public class TravelPlan {
     @Column(nullable = false)
     private String city;
 
-
+    //--엔티티 관련 메서드--//
+    public void updateDates(LocalDate startDate, LocalDate endDate) {
+        this.start_date = startDate;
+        this.end_date = endDate;
+    }
 
 }
