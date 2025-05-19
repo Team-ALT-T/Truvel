@@ -10,14 +10,14 @@ import java.time.LocalDate;
 public class TravelPlanDateRequest {
 
     @NotNull
-    private LocalDate start_date;
+    private LocalDate startDate;
 
     @NotNull
-    private LocalDate end_date;
+    private LocalDate endDate;
 
     @Builder
-    public TravelPlanDateRequest(LocalDate start_date, LocalDate end_date) {
-        this.start_date = start_date;
-        this.end_date = end_date;
+    public TravelPlanDateRequest(LocalDate startDate, LocalDate endDate) {
+        this.startDate = startDate;
+        this.endDate = endDate;
     }
 }
