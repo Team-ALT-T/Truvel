@@ -21,6 +21,9 @@ public class TravelPlanDraftRequest {
 
 
     public TravelPlan toTravelPlanDraft() {
-        return new TravelPlan(null, nation, null, null, city);
+        return TravelPlan.builder()
+                .city(city)
+                .nation(nation)
+                .build();
     }
 }

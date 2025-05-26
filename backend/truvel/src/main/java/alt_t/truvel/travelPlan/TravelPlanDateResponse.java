@@ -5,7 +5,7 @@ import lombok.Getter;
 
 @Getter
 @AllArgsConstructor
-public class TravelPlanDataResponse {
+public class TravelPlanDateResponse {
     private String message;
-    private Long travel_plan_id;
+    private Long travelPlanId;
 }

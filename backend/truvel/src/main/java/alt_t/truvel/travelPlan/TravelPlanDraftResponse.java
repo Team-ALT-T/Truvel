@@ -11,5 +11,5 @@ public class TravelPlanDraftResponse {
 
     private String message;
 
-    private Long travel_plan_id;
+    private Long travelPlanId;
 }
