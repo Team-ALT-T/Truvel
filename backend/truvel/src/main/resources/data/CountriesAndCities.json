@@ -1,0 +1,75 @@
+{
+  "countries": [
+    { "id": 1, "korean": "일본", "english": "Japan" },
+    { "id": 2, "korean": "미국", "english": "United States" },
+    { "id": 3, "korean": "베트남", "english": "Vietnam" },
+    { "id": 4, "korean": "프랑스", "english": "France" },
+    { "id": 5, "korean": "태국", "english": "Thailand" },
+    { "id": 6, "korean": "영국", "english": "United Kingdom" },
+    { "id": 7, "korean": "이탈리아", "english": "Italy" },
+    { "id": 8, "korean": "호주", "english": "Australia" },
+    { "id": 9, "korean": "캐나다", "english": "Canada" },
+    { "id": 10, "korean": "스페인", "english": "Spain" }
+  ],
+  "cities": [
+    { "countryId": 1, "korean": "도쿄", "english": "Tokyo" },
+    { "countryId": 1, "korean": "오사카", "english": "Osaka" },
+    { "countryId": 1, "korean": "교토", "english": "Kyoto" },
+    { "countryId": 1, "korean": "삿포로", "english": "Sapporo" },
+    { "countryId": 1, "korean": "후쿠오카", "english": "Fukuoka" },
+
+    { "countryId": 2, "korean": "뉴욕", "english": "New York" },
+    { "countryId": 2, "korean": "로스앤젤레스", "english": "Los Angeles" },
+    { "countryId": 2, "korean": "라스베이거스", "english": "Las Vegas" },
+    { "countryId": 2, "korean": "샌프란시스코", "english": "San Francisco" },
+    { "countryId": 2, "korean": "시카고", "english": "Chicago" },
+
+    { "countryId": 3, "korean": "하노이", "english": "Hanoi" },
+    { "countryId": 3, "korean": "호치민", "english": "Ho Chi Minh City" },
+    { "countryId": 3, "korean": "다낭", "english": "Da Nang" },
+    { "countryId": 3, "korean": "나트랑", "english": "Nha Trang" },
+    { "countryId": 3, "korean": "후에", "english": "Hue" },
+
+    { "countryId": 4, "korean": "파리", "english": "Paris" },
+    { "countryId": 4, "korean": "니스", "english": "Nice" },
+    { "countryId": 4, "korean": "리옹", "english": "Lyon" },
+    { "countryId": 4, "korean": "마르세유", "english": "Marseille" },
+    { "countryId": 4, "korean": "보르도", "english": "Bordeaux" },
+
+    { "countryId": 5, "korean": "방콕", "english": "Bangkok" },
+    { "countryId": 5, "korean": "푸켓", "english": "Phuket" },
+    { "countryId": 5, "korean": "치앙마이", "english": "Chiang Mai" },
+    { "countryId": 5, "korean": "파타야", "english": "Pattaya" },
+    { "countryId": 5, "korean": "아유타야", "english": "Ayutthaya" },
+
+    { "countryId": 6, "korean": "런던", "english": "London" },
+    { "countryId": 6, "korean": "맨체스터", "english": "Manchester" },
+    { "countryId": 6, "korean": "리버풀", "english": "Liverpool" },
+    { "countryId": 6, "korean": "에든버러", "english": "Edinburgh" },
+    { "countryId": 6, "korean": "옥스퍼드", "english": "Oxford" },
+
+    { "countryId": 7, "korean": "로마", "english": "Rome" },
+    { "countryId": 7, "korean": "밀라노", "english": "Milan" },
+    { "countryId": 7, "korean": "베네치아", "english": "Venice" },
+    { "countryId": 7, "korean": "피렌체", "english": "Florence" },
+    { "countryId": 7, "korean": "나폴리", "english": "Naples" },
+
+    { "countryId": 8, "korean": "시드니", "english": "Sydney" },
+    { "countryId": 8, "korean": "멜버른", "english": "Melbourne" },
+    { "countryId": 8, "korean": "브리즈번", "english": "Brisbane" },
+    { "countryId": 8, "korean": "퍼스", "english": "Perth" },
+    { "countryId": 8, "korean": "애들레이드", "english": "Adelaide" },
+
+    { "countryId": 9, "korean": "토론토", "english": "Toronto" },
+    { "countryId": 9, "korean": "밴쿠버", "english": "Vancouver" },
+    { "countryId": 9, "korean": "몬트리올", "english": "Montreal" },
+    { "countryId": 9, "korean": "퀘벡", "english": "Quebec City" },
+    { "countryId": 9, "korean": "오타와", "english": "Ottawa" },
+
+    { "countryId": 10, "korean": "마드리드", "english": "Madrid" },
+    { "countryId": 10, "korean": "바르셀로나", "english": "Barcelona" },
+    { "countryId": 10, "korean": "세비야", "english": "Seville" },
+    { "countryId": 10, "korean": "발렌시아", "english": "Valencia" },
+    { "countryId": 10, "korean": "말라가", "english": "Malaga" }
+  ]
+}
