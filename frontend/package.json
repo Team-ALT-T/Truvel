@@ -9,11 +9,12 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.80.2",
+    "lucide-react": "^0.514.0",
     "next": "15.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "styled-components": "^6.1.18",
+    "@tanstack/react-query": "^5.80.2",
     "babel-plugin-styled-components": "^2.0.7"
   },
   "devDependencies": {
