@@ -26,7 +26,9 @@ public class EditorController {
     public ResponseEntity<EditorSearchResponse> searchUsers(
             @RequestParam String nickname) {
         EditorSearchResponse response = editorService.searchUsersByNickname(nickname);
-        return ResponseEntity.ok(response);
+        return (response == null) ? ResponseEntity.noContent().build()
+                                : ResponseEntity.ok(response);
+
     }
 
 
