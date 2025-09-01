@@ -51,7 +51,7 @@ public class TravelPlanController {
     @GetMapping("/travels/{travelPlanId}")
     public ResponseEntity<TravelPlanResponse> getTravelPlan(@RequestParam Long userId, @PathVariable Long travelPlanId) {
 
-        TravelPlanResponse response = travelPlanService.getTravelPlan(userId, travelPlanId);
+        TravelPlanResponse response = travelPlanService.getTravelPlan(travelPlanId);
         return ResponseEntity.ok(response);
     }
 
