@@ -2,7 +2,7 @@ package alt_t.truvel.routeOptimization.daySchedule.domain.entity;
 
 import alt_t.truvel.location.domain.entity.Location;
 import alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.requset.DayScheduleRequest;
-import alt_t.truvel.travelPlan.TravelPlan;
+import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;

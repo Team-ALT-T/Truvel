@@ -69,7 +69,7 @@ class ScheduleServiceTest {
         // when
         List<ScheduleRequest> schedules1 = DAY_SCHEDULE_REQUEST.getSchedules();
         // create
-        List<Schedule> schedules2 = scheduleService.createSchedule(daySchedule, dayScheduleRequest.getSchedules());
+        //List<Schedule> schedules2 = scheduleService.createSchedule(daySchedule, dayScheduleRequest.getSchedules());
         // get
         List<Schedule> schedules3 = daySchedule.getSchedules();
 

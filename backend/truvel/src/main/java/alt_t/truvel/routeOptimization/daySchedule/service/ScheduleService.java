@@ -7,6 +7,7 @@ import alt_t.truvel.routeOptimization.daySchedule.domain.entity.DaySchedule;
 import alt_t.truvel.routeOptimization.daySchedule.domain.entity.Schedule;
 import alt_t.truvel.routeOptimization.daySchedule.domain.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,31 +18,24 @@ import java.util.NoSuchElementException;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final LocationRepository locationRepository;
 
-    public List<Schedule> createSchedule(DaySchedule daySchedule, List<ScheduleRequest> scheduleRequests){
+    public void createSchedule(DaySchedule daySchedule, List<ScheduleRequest> scheduleRequests){
         List<Schedule> schedules = new ArrayList<>();
         scheduleRequests.forEach(scheduleRequest -> {
             Location location = locationRepository.findByName(scheduleRequest.getLocationName())
                     .orElseThrow(() -> new NoSuchElementException(scheduleRequest.getLocationName() + "를 찾을 수 없습니다."));
 
-            // 중복 체크: 이미 같은 daySchedule, location 조합이 있는지 확인
-            boolean exists = scheduleRepository.existsByDayScheduleAndLocation(daySchedule, location);
-            if (exists) {
-                // 필요에 따라 예외 발생 또는 건너뛰기
-                throw new IllegalArgumentException("이미 등록된 일정입니다: " + location.getName());
-                // 또는 return; 으로 건너뛰기
-            }
+            log.debug("Checking existence for DaySchedule ID: {} and Location: {}", daySchedule.getDay_schedule_id(), location.getName());
 
             schedules.add(Schedule.of(daySchedule, scheduleRequest, location));
         });
 
         setStayTime(schedules);
-        daySchedule.updateSchedules(schedules);
-
-        return scheduleRepository.saveAll(schedules);
+        daySchedule.updateSchedules(scheduleRepository.saveAll(schedules));
     }
 
     // stayTime이 비어있으면 category에 맞춰 자동으로 stayTime을 설정해주는 함수

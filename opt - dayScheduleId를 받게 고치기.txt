@@ -1,0 +1,5 @@
+opt - dayScheduleId를 받게 고치기
+location은 travel Plan에 종속되지 않게 바꾸기
+getDaySchedule 만들기
+travelPlan 조회시 일정도 나오게 만들기
+editorId로 travelPlan 조회 만들기

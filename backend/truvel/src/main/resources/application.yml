@@ -10,12 +10,42 @@ spring:
     api:
       key: ${GOOGLE_API_KEY}
 
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${GMAIL_ADDRESS}
+    password: ${GOOGLE_APP_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+        debug: false
+        transport:
+          protocol: smtp
+  default-encoding: UTF-8
+
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: update
     properties:
       hibernate:
         format_sql: true
         dialect: org.hibernate.dialect.MySQL8Dialect
     show-sql: true
 
+logging:
+  level:
+    org.springframework: INFO
+    org.springframework.security: DEBUG # 이 부분을 추가하거나 DEBUG로 변경
+#    org.springdoc: DEBUG             # SpringDoc OpenAPI 로그를 위한 추가 (선택 사항이지만 유용)
+    alt_t.truvel: DEBUG
+
+
+jwt:
+  secret: ${JWT_SECRET}

@@ -7,7 +7,7 @@ import alt_t.truvel.location.domain.repository.LocationRepository;
 import alt_t.truvel.location.locationDto.response.GooglePlaceResultDto;
 import alt_t.truvel.location.locationDto.response.LocationResponseDto;
 import alt_t.truvel.location.locationDto.request.LocationSaveRequestDto;
-import alt_t.truvel.travelPlan.TravelPlanRepository;
+import alt_t.truvel.travelPlan.domain.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -2,7 +2,7 @@ package alt_t.truvel.location.domain.repository;
 
 
 import alt_t.truvel.location.domain.entity.Location;
-import alt_t.truvel.travelPlan.TravelPlan;
+import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.JpaRepository;
 

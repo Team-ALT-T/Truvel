@@ -1,7 +1,7 @@
 package alt_t.truvel.location.domain.entity;
 
 import alt_t.truvel.location.PlaceCategory;
-import alt_t.truvel.travelPlan.TravelPlan;
+import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
@@ -18,7 +18,6 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long location_id;
 
-    @Setter
     @ManyToOne
     @JoinColumn(name = "travel_plan_id")
     @JsonBackReference
@@ -40,5 +39,9 @@ public class Location {
     @Column
     // 경도
     private double longitude;
+
+    public void setTravelPlan(TravelPlan travelPlan) {
+        this.travelPlan = travelPlan;
+    }
 
 }

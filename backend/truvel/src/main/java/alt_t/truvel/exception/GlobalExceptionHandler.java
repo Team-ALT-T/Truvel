@@ -36,4 +36,25 @@ public class GlobalExceptionHandler {
 
         return ErrorResponseEntity.toResponseEntity(ErrorCode.VALIDATION_FAILED);
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<String> handleIllegalArgument(IllegalArgumentException ex) {
+        return ResponseEntity
+                .badRequest()
+                .body(ex.getMessage());
+    }
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> handleIllegalArgument(RuntimeException ex) {
+        return ResponseEntity
+                .badRequest()
+                .body(ex.getMessage());
+    }
+
+    @ExceptionHandler(RouteOptException.class)
+    public ResponseEntity<String> handleRouteOptException(RouteOptException ex) {
+        return ResponseEntity
+                .badRequest()
+                .body(ex.getMessage());
+    }
 }

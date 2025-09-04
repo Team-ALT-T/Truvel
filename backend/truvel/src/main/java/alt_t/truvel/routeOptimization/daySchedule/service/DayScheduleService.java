@@ -9,9 +9,10 @@ import alt_t.truvel.routeOptimization.daySchedule.domain.entity.DaySchedule;
 import alt_t.truvel.routeOptimization.daySchedule.domain.entity.Schedule;
 import alt_t.truvel.routeOptimization.daySchedule.domain.repository.DayScheduleRepository;
 import alt_t.truvel.routeOptimization.daySchedule.domain.repository.ScheduleRepository;
-import alt_t.truvel.travelPlan.TravelPlan;
-import alt_t.truvel.travelPlan.TravelPlanRepository;
+import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
+import alt_t.truvel.travelPlan.domain.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -27,7 +29,7 @@ public class DayScheduleService {
     private final DayScheduleRepository dayScheduleRepository;
     private final TravelPlanRepository travelPlanRepository;
     private final LocationRepository locationRepository;
-    private final ScheduleRepository scheduleRepository;
+    private final ScheduleService scheduleService;
 
     // Response 객체에서 최적화된 일정을 부르기 위한 함수
     public DayScheduleResponse getOptimizationDaySchedule(Long travel_plan_id, DayScheduleRequest dayScheduleRequest){
@@ -39,7 +41,9 @@ public class DayScheduleService {
         DaySchedule daySchedule = createDaySchedule(travelPlan, dayScheduleRequest);
 
         // daySchedule에 대한 일정 최적화
+        log.debug("Before Optimization: {}", daySchedule.getSchedules());
         daySchedule.updateSchedules(RouteOptimization.optimization(daySchedule.getSchedules(), daySchedule));
+        log.debug("After Optimization: {}", daySchedule.getSchedules());
         return new DayScheduleResponse(daySchedule);
     }
 
@@ -56,36 +60,10 @@ public class DayScheduleService {
         );
 
         DaySchedule daySchedule = saveDaySchedule(DaySchedule.of(travelPlan, dayScheduleRequest,startLocation,endLocation));
-        createSchedules(daySchedule, dayScheduleRequest.getSchedules());
+        scheduleService.createSchedule(daySchedule, dayScheduleRequest.getSchedules());
         return daySchedule;
     }
 
-    // Schedule 생성 로직을 DayScheduleService로 이동
-    private List<Schedule> createSchedules(DaySchedule daySchedule, List<ScheduleRequest> scheduleRequests){
-        List<Schedule> schedules = new ArrayList<>();
-        scheduleRequests.forEach(scheduleRequest -> {
-            Location location = locationRepository.findByName(scheduleRequest.getLocationName())
-                    .orElseThrow(() -> new NoSuchElementException(scheduleRequest.getLocationName() + "를 찾을 수 없습니다."));
-
-            // 중복 체크: 이미 같은 daySchedule, location 조합이 있는지 확인
-            boolean exists = scheduleRepository.existsByDayScheduleAndLocation(daySchedule, location);
-            if (exists) {
-                throw new IllegalArgumentException("이미 등록된 일정입니다: " + location.getName());
-            }
-
-            Schedule schedule = Schedule.of(daySchedule, scheduleRequest, location);
-            
-            // stayTime이 비어있으면 category에 맞춰 자동으로 stayTime을 설정
-            if (schedule.getStayTime() == null){
-                schedule.updateStayTime(schedule.getLocation().getCategory().getStayTime());
-            }
-            
-            schedules.add(schedule);
-        });
-
-        daySchedule.updateSchedules(schedules);
-        return scheduleRepository.saveAll(schedules);
-    }
 
     // 기본적인 save 함수
     public DaySchedule saveDaySchedule(DaySchedule daySchedule){
