@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RequiredArgsConstructor // 생성자 주입
-@Controller
+@RestController
 public class TravelPlanController {
 
     private final TravelPlanService travelPlanService;
@@ -58,7 +58,7 @@ public class TravelPlanController {
     public ResponseEntity<TravelPlanResponse> getTravelPlan(@AuthenticationPrincipal UserPrincipal userPrincipal, @PathVariable Long travelPlanId) {
         Long userId = userPrincipal.getId();
 
-        TravelPlanResponse response = travelPlanService.getTravelPlan(userId, travelPlanId);
+        TravelPlanResponse response = travelPlanService.getTravelPlan(travelPlanId);
         return ResponseEntity.ok(response);
     }
 

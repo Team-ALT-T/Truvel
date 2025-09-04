@@ -19,7 +19,13 @@ public class EmailVerificationController {
     @PostMapping("/emails/send")
     public ResponseEntity<EmailVerificationResponse<Void>> sendVerificationCode(
             @RequestBody EmailVerificationRequest request) {
-        emailVerificationService.sendVerificationCode(request.getEmail());
+        try {
+            emailVerificationService.sendVerificationCode(request.getEmail());
+        }
+        catch (Exception e) {
+            return ResponseEntity.badRequest().body(EmailVerificationResponse.fail("인증 코드 전송에 실패했습니다: " + e.getMessage()));
+        }
+
         return ResponseEntity.ok(EmailVerificationResponse.success("인증 코드가 전송되었습니다."));
     }
 

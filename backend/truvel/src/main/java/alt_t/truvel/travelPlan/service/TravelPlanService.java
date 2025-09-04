@@ -90,14 +90,11 @@ public class TravelPlanService {
 
     /**
      * 여행 일정 단건 조회 메서드
-     * @param userId : 사용자의 아이디
      * @param travelPlanId : 여행 일정 아이디
      * @return : 여행 일정 하나를 반환
      */
     @Transactional(readOnly = true)
-    public TravelPlanResponse getTravelPlan(Long userId, Long travelPlanId) {
-
-        User user = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+    public TravelPlanResponse getTravelPlan(Long travelPlanId) {
 
         TravelPlan travelPlan = travelPlanRepository.findById(travelPlanId)
                 .orElseThrow(() -> new IllegalArgumentException("여행 일정을 찾을 수 없습니다."));
@@ -112,6 +109,5 @@ public class TravelPlanService {
         );
 
     }
-
 
 }

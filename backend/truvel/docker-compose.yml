@@ -9,29 +9,28 @@ services:
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "3308:3306"
+      - "${DB_PORT}:3306"
     volumes:
       - mysql-data:/var/lib/mysql
 
-  web:
-    build: .
-    container_name: springboot_web
-    restart: always
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    depends_on:
-      - mysql
-      - redis
-
+#  web:
+#    build: .
+#    container_name: springboot_web
+#    restart: always
+#    ports:
+#      - "8080:8080"
+#    env_file:
+#      - .env
+#    depends_on:
+#      - mysql
+#      - redis
+#
   redis:
-    container_name: truvel-redis
+    container_name: redis
     image: "redis:7" # redis 버전 명시
     ports:
-      - "16379:6379"
+        - "${REDIS_PORT}:6379"
     command: ["redis-server", "--bind", "0.0.0.0", "--port", "6379"]
-
 
 volumes:
   mysql-data:

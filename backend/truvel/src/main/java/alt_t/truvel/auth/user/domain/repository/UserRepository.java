@@ -1,6 +1,7 @@
 package alt_t.truvel.auth.user.domain.repository;
 
 import alt_t.truvel.auth.user.domain.entity.User;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -23,4 +24,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
      */
     Optional<User> findByNicknameContainingIgnoreCase(String nickname);
 
+    Optional<User> findByNickname(@NotBlank(message = "이름을 입력해주세요.") String nickname);
 }

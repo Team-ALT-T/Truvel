@@ -1,8 +1,8 @@
 package alt_t.truvel.travelPlan.domain.entity;
 
-import alt_t.truvel.daySchedule.DaySchedule;
+import alt_t.truvel.location.domain.entity.Location;
+import alt_t.truvel.routeOptimization.daySchedule.domain.entity.DaySchedule;
 import alt_t.truvel.editor.domain.entity.Editor;
-import alt_t.truvel.location.Location;
 import alt_t.truvel.searchCountryAndCity.domain.entity.City;
 import alt_t.truvel.searchCountryAndCity.domain.entity.Country;
 import alt_t.truvel.auth.user.domain.entity.User;
@@ -111,8 +111,5 @@ public class TravelPlan {
         this.editors.add(editor);
         editor.setTravelPlan(this);
     }
-
-
-
 
 }

@@ -9,6 +9,8 @@ import alt_t.truvel.auth.jwt.JwtToken;
 import alt_t.truvel.auth.jwt.JwtUtil;
 import alt_t.truvel.auth.user.domain.entity.User;
 import alt_t.truvel.auth.user.domain.repository.UserRepository;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -40,10 +42,23 @@ public class JwtAuthService {
     @Transactional
     public SignUpResponse signup(SignUpRequest request) {
 
+        // 유효한 이메일 형식인지 확인
+        try {
+            InternetAddress emailAddr = new InternetAddress(request.getEmail());
+            emailAddr.validate();
+        } catch (AddressException ex) {
+            throw new IllegalArgumentException("유효하지 않은 이메일 형식입니다: " + request.getEmail());
+        }
+
         // 중복 로그인 아이디 확인
         if (userRepository.findByEmail(request.getEmail()).isPresent()) {
             throw new RuntimeException("이미 사용 중인 이메일입니다.: " + request.getEmail());
         }
+        // 중복 닉네임 확인
+        else if (userRepository.findByNickname(request.getNickname()).isPresent()) {
+            throw new RuntimeException("이미 사용 중인 닉네임입니다.: " + request.getNickname());
+        }
+
 
         // 사용자를 DB에 저장
         String encodedPassword = passwordEncoder.encode(request.getPassword());
