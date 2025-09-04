@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>서울 교통 혼잡도 보기</title>
+  <meta charset="UTF-8" />
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-core.js"></script>
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-service.js"></script>
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-ui.js"></script>
+  <script src="https://js.api.here.com/v3/3.1/mapsjs-mapevents.js"></script>
+  <link rel="stylesheet" href="https://js.api.here.com/v3/3.1/mapsjs-ui.css" />
+  <style>
+    #map { width: 100%; height: 600px; }
+  </style>
+</head>
+<body>
+<h2>서울 실시간 교통 혼잡도</h2>
+<div id="map"></div>
+
+<script>
+  var platform = new H.service.Platform({
+    apikey: "I6WNGv7r5iWP25Jpe6SUvpcE_2TCzZ5VEQn-4lB9HA"
+  });
+
+  var defaultLayers = platform.createDefaultLayers();
+  var map = new H.Map(document.getElementById('map'),
+          defaultLayers.vector.normal.map, {
+            center: { lat: 37.5665, lng: 126.9780 },
+            zoom: 14
+          });
+
+  var behavior = new H.mapevents.Behavior(new H.mapevents.MapEvents(map));
+  var ui = H.ui.UI.createDefault(map, defaultLayers);
+
+  // 교통 타일 추가
+  var trafficLayer = platform.getMapTileService({ type: 'base' }).createTileLayer(
+          'traffic',
+          'flow',
+          256,
+          'png8'
+  );
+  map.addLayer(trafficLayer);
+</script>
+</body>
+</html>

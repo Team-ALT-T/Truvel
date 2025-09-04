@@ -13,4 +13,5 @@ public class LocationResponseDto {
     private Float latitude;
     private Float longitude;
     private String address;
+    private String category;
 }

@@ -1,7 +1,10 @@
 package alt_t.truvel.location.domain.entity;
 
-import alt_t.truvel.travelPlan.TravelPlan;
+import alt_t.truvel.location.PlaceCategory;
+import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Entity
@@ -13,28 +16,32 @@ public class Location {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Long location_id;
 
-    private String place;
-    private Float latitude;
-    private Float longitude;
+    @ManyToOne
+    @JoinColumn(name = "travel_plan_id")
+    @JsonBackReference
+    private TravelPlan travelPlan;
+
+    @NotNull
+    private String name;
+
+    @NotNull
     private String address;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "travel_plan_id")
-    private TravelPlan travelPlan;
+    @NotNull
+    private PlaceCategory category;
+
+    @Column
+    // 위도
+    private double latitude;
+
+    @Column
+    // 경도
+    private double longitude;
 
     public void setTravelPlan(TravelPlan travelPlan) {
         this.travelPlan = travelPlan;
     }
-
-    public Location(Long id, String place, Float latitude, Float longitude, String address) {
-        this.id = id;
-        this.place = place;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.address = address;
-    }
-
 
 }

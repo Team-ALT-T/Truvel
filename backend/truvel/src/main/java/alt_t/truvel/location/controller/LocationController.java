@@ -12,7 +12,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/locations")
+@RequestMapping("/locations/{travel_plan_id}")
 public class LocationController {
 
     private final LocationService locationService;
@@ -27,8 +27,8 @@ public class LocationController {
 
     //장소 저장
     @PostMapping
-    public ResponseEntity<List<LocationResponseDto>> saveMultipleLocations(@RequestBody List<LocationSaveRequestDto> dtos) {
-        List<LocationResponseDto> responseDtos = locationService.saveSelectedPlaces(dtos);
+    public ResponseEntity<List<LocationResponseDto>> saveMultipleLocations(@RequestBody List<LocationSaveRequestDto> dtos, @PathVariable Long travel_plan_id) {
+        List<LocationResponseDto> responseDtos = locationService.saveSelectedPlaces(travel_plan_id, dtos);
         return ResponseEntity.status(201).body(responseDtos);
     }
 
