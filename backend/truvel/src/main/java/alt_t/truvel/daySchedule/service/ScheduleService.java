@@ -1,11 +1,11 @@
-package alt_t.truvel.routeOptimization.daySchedule.service;
+package alt_t.truvel.daySchedule.service;
 
 import alt_t.truvel.location.domain.entity.Location;
 import alt_t.truvel.location.domain.repository.LocationRepository;
-import alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.requset.ScheduleRequest;
-import alt_t.truvel.routeOptimization.daySchedule.domain.entity.DaySchedule;
-import alt_t.truvel.routeOptimization.daySchedule.domain.entity.Schedule;
-import alt_t.truvel.routeOptimization.daySchedule.domain.repository.ScheduleRepository;
+import alt_t.truvel.daySchedule.dayScheduleDTO.requset.ScheduleRequest;
+import alt_t.truvel.daySchedule.domain.entity.DaySchedule;
+import alt_t.truvel.daySchedule.domain.entity.Schedule;
+import alt_t.truvel.daySchedule.domain.repository.ScheduleRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

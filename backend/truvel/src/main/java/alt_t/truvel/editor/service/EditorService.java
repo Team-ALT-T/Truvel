@@ -290,4 +290,31 @@ public class EditorService {
                 .collect(Collectors.toList());
     }
 
+    /**
+     * 여행 계획의 편집자를 제거하는 메서드
+     * @param editorId : 여행계획 아이디
+     */
+    public void removeEditor(Long editorId) {
+        // 제거할 편집자 조회
+        User editorUser = userRepository.findById(editorId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+
+    }
+
+    /**
+     * 사용자가 편집자로 참여하고 있는 여행계획 목록들을 조회하는 메서드
+     * @param userId : 사용자 아이디
+     * @return : 사용자가 편집자로 참여하고 있는 여행계획 목록들을 반환
+     */
+
+    public List<TravelPlan> getTravelPlansByUserId(Long userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        List<Editor> editors = editorRepository.findByUser(user);
+        return editors.stream()
+                .filter(editor -> editor.getStatus() == InvitationStatus.ACCEPTED) // 초대 수락 상태인 편집자만 필터링
+                .map(Editor::getTravelPlan) // 각 편집자의 여행 계획을 추출
+                .collect(Collectors.toList());
+    }
+
 }

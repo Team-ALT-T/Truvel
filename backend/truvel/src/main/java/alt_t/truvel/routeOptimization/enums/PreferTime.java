@@ -1,4 +1,4 @@
-package alt_t.truvel.routeOptimization.daySchedule.enums;
+package alt_t.truvel.routeOptimization.enums;
 
 import java.time.LocalTime;
 

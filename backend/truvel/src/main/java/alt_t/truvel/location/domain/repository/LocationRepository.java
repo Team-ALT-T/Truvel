@@ -9,8 +9,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
 
 public interface LocationRepository extends JpaRepository<Location, Long> {
-    Location findByTravelPlan(TravelPlan travelPlan);
-
-    Optional<Location> findByName(@NotNull String name);
+    Optional<Location> findByName(String name);
 }
 

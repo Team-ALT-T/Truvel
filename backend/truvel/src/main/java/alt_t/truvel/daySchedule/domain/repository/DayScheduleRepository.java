@@ -1,6 +1,6 @@
-package alt_t.truvel.routeOptimization.daySchedule.domain.repository;
+package alt_t.truvel.daySchedule.domain.repository;
 
-import alt_t.truvel.routeOptimization.daySchedule.domain.entity.DaySchedule;
+import alt_t.truvel.daySchedule.domain.entity.DaySchedule;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

@@ -2,8 +2,11 @@ package alt_t.truvel.editor.controller;
 
 import alt_t.truvel.auth.security.UserPrincipal;
 import alt_t.truvel.editor.dto.*;
+
+import java.util.ArrayList;
 import java.util.List;
 import alt_t.truvel.editor.service.EditorService;
+import alt_t.truvel.travelPlan.dto.TravelPlanResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,8 +33,6 @@ public class EditorController {
                                 : ResponseEntity.ok(response);
 
     }
-
-
 
     // ========== 여행 계획 편집자 ==========
 
@@ -67,6 +68,20 @@ public class EditorController {
         return ResponseEntity.ok(response);
     }
 
+    /**
+     * 사용자가 참여 중인 여행 계획 목록 조회
+     * @param userId 사용자 ID
+     * @return 여행 계획 목록
+     */
+    @GetMapping("/editors/{userId}/travels")
+    public ResponseEntity<List<TravelPlanResponse>> getUserTravelPlans(
+            @PathVariable Long userId) {
+        List<TravelPlanResponse> travelPlans =
+                editorService.getTravelPlansByUserId(userId).stream()
+                        .map(travelPlan -> TravelPlanResponse.of(travelPlan.getId()))
+                        .toList();
+        return ResponseEntity.ok(travelPlans);
+    }
 
 
     // ========== 초대 관련 ==========
@@ -121,4 +136,12 @@ public class EditorController {
         );
         return ResponseEntity.ok(response);
     }
+
+    @DeleteMapping("/editors/{editorId}")
+    public ResponseEntity<String> removeEditor(
+            @PathVariable Long editorId) {
+        editorService.removeEditor(editorId);
+        return ResponseEntity.ok("편집자 삭제가 완료되었습니다.");
+    }
+
 }

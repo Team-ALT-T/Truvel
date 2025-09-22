@@ -1,7 +1,7 @@
 package alt_t.truvel.travelPlan.domain.entity;
 
 import alt_t.truvel.location.domain.entity.Location;
-import alt_t.truvel.routeOptimization.daySchedule.domain.entity.DaySchedule;
+import alt_t.truvel.daySchedule.domain.entity.DaySchedule;
 import alt_t.truvel.editor.domain.entity.Editor;
 import alt_t.truvel.searchCountryAndCity.domain.entity.City;
 import alt_t.truvel.searchCountryAndCity.domain.entity.Country;
@@ -52,11 +52,6 @@ public class TravelPlan {
     private List<DaySchedule> daySchedules = new ArrayList<>();
 
 
-    @Builder.Default
-    @OneToMany(mappedBy = "travelPlan", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Location> locations = new ArrayList<>();
-
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
@@ -93,12 +88,6 @@ public class TravelPlan {
     public void addDaySchedule(DaySchedule daySchedule) {
         this.daySchedules.add(daySchedule); // 이후에 DaySchedule 엔티티에 daySchedule.setTravelPlan(...) 메서드 필요
         daySchedule.setTravelPlan(this); // 양방향 설정
-    }
-
-    // 일별로 장소를 추가하는 메서드
-    public void addLocation(Location location) {
-        this.locations.add(location);
-        location.setTravelPlan(this);
     }
 
     // 사용자를 설정하는 메서드

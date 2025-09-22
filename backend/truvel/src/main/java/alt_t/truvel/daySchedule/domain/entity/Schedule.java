@@ -1,14 +1,13 @@
-package alt_t.truvel.routeOptimization.daySchedule.domain.entity;
+package alt_t.truvel.daySchedule.domain.entity;
 
 import alt_t.truvel.location.domain.entity.Location;
-import alt_t.truvel.routeOptimization.daySchedule.enums.PreferTime;
-import alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.requset.ScheduleRequest;
+import alt_t.truvel.routeOptimization.enums.PreferTime;
+import alt_t.truvel.daySchedule.dayScheduleDTO.requset.ScheduleRequest;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 
 import java.time.Duration;
 

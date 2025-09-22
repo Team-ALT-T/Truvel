@@ -105,9 +105,16 @@ public class TravelPlanService {
                 travelPlan.getStartDate(),
                 travelPlan.getEndDate(),
                 travelPlan.getNationId().getKorean(),
-                travelPlan.getCityId().getKorean()
+                travelPlan.getCityId().getKorean(),
+                travelPlan.getDaySchedules()
         );
 
+    }
+
+    public TravelPlan getTravelPlanEntityById(Long travelPlanId) {
+        return travelPlanRepository.findById(travelPlanId).orElseThrow(
+                () -> new IllegalArgumentException("Invalid travel plan ID: " + travelPlanId)
+        );
     }
 
 }
