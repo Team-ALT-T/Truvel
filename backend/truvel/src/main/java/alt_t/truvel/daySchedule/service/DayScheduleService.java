@@ -1,14 +1,13 @@
-package alt_t.truvel.routeOptimization.daySchedule.service;
+package alt_t.truvel.daySchedule.service;
 
 import alt_t.truvel.location.domain.entity.Location;
 import alt_t.truvel.location.domain.repository.LocationRepository;
-import alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.requset.DayScheduleRequest;
-import alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.requset.ScheduleRequest;
-import alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.response.DayScheduleResponse;
-import alt_t.truvel.routeOptimization.daySchedule.domain.entity.DaySchedule;
-import alt_t.truvel.routeOptimization.daySchedule.domain.entity.Schedule;
-import alt_t.truvel.routeOptimization.daySchedule.domain.repository.DayScheduleRepository;
-import alt_t.truvel.routeOptimization.daySchedule.domain.repository.ScheduleRepository;
+import alt_t.truvel.daySchedule.dayScheduleDTO.requset.DayScheduleRequest;
+import alt_t.truvel.daySchedule.dayScheduleDTO.response.DayScheduleResponse;
+import alt_t.truvel.daySchedule.domain.entity.DaySchedule;
+import alt_t.truvel.daySchedule.domain.repository.DayScheduleRepository;
+import alt_t.truvel.location.service.LocationService;
+import alt_t.truvel.routeOptimization.service.RouteOptimization;
 import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import alt_t.truvel.travelPlan.domain.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,8 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.NoSuchElementException;
 
 
@@ -28,7 +25,7 @@ import java.util.NoSuchElementException;
 public class DayScheduleService {
     private final DayScheduleRepository dayScheduleRepository;
     private final TravelPlanRepository travelPlanRepository;
-    private final LocationRepository locationRepository;
+    private final LocationService locationService;
     private final ScheduleService scheduleService;
 
     // Response 객체에서 최적화된 일정을 부르기 위한 함수
@@ -52,12 +49,8 @@ public class DayScheduleService {
     public DaySchedule createDaySchedule(TravelPlan travelPlan, DayScheduleRequest dayScheduleRequest){
 
         // location service에 아래 함수 추가 필요
-        Location startLocation = locationRepository.findByName(dayScheduleRequest.getStartLocation()).orElseThrow(
-                ()-> new NoSuchElementException(dayScheduleRequest.getStartLocation()+"은 저장되지 않은 장소입니다.")
-        );
-        Location endLocation = locationRepository.findByName(dayScheduleRequest.getEndLocation()).orElseThrow(
-                ()-> new NoSuchElementException(dayScheduleRequest.getStartLocation()+"은 저장되지 않은 장소입니다.")
-        );
+        Location startLocation = locationService.getLocationByName(dayScheduleRequest.getStartLocation());
+        Location endLocation = locationService.getLocationByName(dayScheduleRequest.getEndLocation());
 
         DaySchedule daySchedule = saveDaySchedule(DaySchedule.of(travelPlan, dayScheduleRequest,startLocation,endLocation));
         scheduleService.createSchedule(daySchedule, dayScheduleRequest.getSchedules());
@@ -73,12 +66,8 @@ public class DayScheduleService {
     // 기본적인 update 함수
     public void updateDaySchedule(Long id, DayScheduleRequest dayScheduleRequest){
         DaySchedule daySchedule = dayScheduleRepository.findById(id).orElseThrow();
-        Location startLocation = locationRepository.findByName(dayScheduleRequest.getStartLocation()).orElseThrow(
-                ()-> new NoSuchElementException(dayScheduleRequest.getStartLocation()+"은 저장되지 않은 장소입니다.")
-        );
-        Location endLocation = locationRepository.findByName(dayScheduleRequest.getEndLocation()).orElseThrow(
-                ()-> new NoSuchElementException(dayScheduleRequest.getStartLocation()+"은 저장되지 않은 장소입니다.")
-        );
+        Location startLocation = locationService.getLocationByName(dayScheduleRequest.getStartLocation());
+        Location endLocation = locationService.getLocationByName(dayScheduleRequest.getEndLocation());
         daySchedule.update(dayScheduleRequest, startLocation, endLocation);
     }
 
@@ -86,5 +75,12 @@ public class DayScheduleService {
     public DaySchedule getDaySchedule(Long day_schedule_id){
         return dayScheduleRepository.findById(day_schedule_id).orElseThrow(() ->
                 new NoSuchElementException("[DayScheduleService] NotFound daySchedule"));
+    }
+
+    // DELETE 일별 일정
+    public void deleteDaySchedule(Long day_schedule_id){
+        DaySchedule daySchedule = dayScheduleRepository.findById(day_schedule_id).orElseThrow(() ->
+                new NoSuchElementException("[DayScheduleService] NotFound daySchedule"));
+        dayScheduleRepository.delete(daySchedule);
     }
 }

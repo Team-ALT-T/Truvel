@@ -46,4 +46,5 @@ public interface EditorRepository extends JpaRepository<Editor, Long> {
 
     // 여행 계획의 수락된 편집자만 조회
     List<Editor> findByTravelPlanAndStatusAndRole(TravelPlan travelPlan, InvitationStatus status, EditorRole role);
+
 }

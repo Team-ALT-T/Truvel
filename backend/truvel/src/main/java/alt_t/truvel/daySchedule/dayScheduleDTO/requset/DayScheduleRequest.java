@@ -1,4 +1,4 @@
-package alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.requset;
+package alt_t.truvel.daySchedule.dayScheduleDTO.requset;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;

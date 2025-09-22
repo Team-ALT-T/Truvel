@@ -1,5 +1,7 @@
 package alt_t.truvel.travelPlan.dto;
 
+import alt_t.truvel.daySchedule.dayScheduleDTO.response.DayScheduleResponse;
+import alt_t.truvel.daySchedule.domain.entity.DaySchedule;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -7,6 +9,7 @@ import lombok.Getter;
 
 
 import java.time.LocalDate;
+import java.util.List;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Getter
@@ -29,17 +32,21 @@ public class TravelPlanResponse {
     @NotNull
     private String cityName;
 
+    @NotNull
+    private List<DaySchedule> daySchedules;
+
 
     @Builder
     public TravelPlanResponse(String message, Long travelPlanId,
                               LocalDate startDate, LocalDate endDate,
-                              String countryName, String cityName) {
+                              String countryName, String cityName, List<DaySchedule> daySchedules) {
         this.message = message;
         this.travelPlanId = travelPlanId;
         this.startDate = startDate;
         this.endDate = endDate;
         this.countryName = countryName;
         this.cityName = cityName;
+        this.daySchedules = daySchedules;
     }
 
 
@@ -54,6 +61,12 @@ public class TravelPlanResponse {
                 .build();
     }
 
+    public static TravelPlanResponse of(Long travelPlanId) {
+        return TravelPlanResponse.builder()
+                .travelPlanId(travelPlanId)
+                .build();
+    }
+
 
     /**
      * 여행 일정 **단건** 조회시 사용
@@ -61,7 +74,8 @@ public class TravelPlanResponse {
      */
     public static TravelPlanResponse toTravelPlan(String  message, Long travelPlanId,
                                                   LocalDate startDate, LocalDate endDate,
-                                                  String countryName, String cityName) { // 파라미터 이름 변경
+                                                  String countryName, String cityName,
+                                                  List<DaySchedule> daySchedules) { // 파라미터 이름 변경
         return TravelPlanResponse.builder()
                 .message(message)
                 .travelPlanId(travelPlanId)
@@ -69,6 +83,7 @@ public class TravelPlanResponse {
                 .endDate(endDate)
                 .countryName(countryName)
                 .cityName(cityName)
+                .daySchedules(daySchedules)
                 .build();
     }
 

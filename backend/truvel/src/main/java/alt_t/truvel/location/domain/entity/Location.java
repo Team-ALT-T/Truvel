@@ -18,11 +18,6 @@ public class Location {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long location_id;
 
-    @ManyToOne
-    @JoinColumn(name = "travel_plan_id")
-    @JsonBackReference
-    private TravelPlan travelPlan;
-
     @NotNull
     private String name;
 
@@ -39,9 +34,5 @@ public class Location {
     @Column
     // 경도
     private double longitude;
-
-    public void setTravelPlan(TravelPlan travelPlan) {
-        this.travelPlan = travelPlan;
-    }
 
 }

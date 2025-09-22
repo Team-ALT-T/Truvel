@@ -1,6 +1,7 @@
 package alt_t.truvel.location.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import alt_t.truvel.location.domain.entity.Location;
 import alt_t.truvel.location.domain.repository.LocationRepository;
@@ -25,10 +26,9 @@ public class LocationService {
     }
 
     // 장소 저장
-    public List<LocationResponseDto> saveSelectedPlaces(Long travel_plan_id , List<LocationSaveRequestDto> dtos) {
+    public List<LocationResponseDto> saveSelectedPlaces(List<LocationSaveRequestDto> dtos) {
         return dtos.stream().map(dto -> {
             Location location = Location.builder()
-                    .travelPlan(travelPlanRepository.getReferenceById(travel_plan_id))
                     .name(dto.getName())
                     .latitude(dto.getLatitude())
                     .longitude(dto.getLongitude())
@@ -47,5 +47,17 @@ public class LocationService {
                     .category(String.valueOf(saved.getCategory()))
                     .build();
         }).toList();
+    }
+
+    public List<Location> getAllLocations() {
+        return locationRepository.findAll();
+    }
+
+    public Location getLocationById(Long id) {
+        return locationRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Invalid location ID: " + id));
+    }
+
+    public Location getLocationByName(String name) {
+        return locationRepository.findByName(name).orElseThrow(() -> new IllegalArgumentException("Invalid location name: " + name));
     }
 }

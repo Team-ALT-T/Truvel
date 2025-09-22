@@ -1,8 +1,8 @@
 package alt_t.truvel.routeOptimization.daySchedule;
 
-import alt_t.truvel.routeOptimization.daySchedule.enums.PreferTime;
-import alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.requset.DayScheduleRequest;
-import alt_t.truvel.routeOptimization.daySchedule.dayScheduleDTO.requset.ScheduleRequest;
+import alt_t.truvel.routeOptimization.enums.PreferTime;
+import alt_t.truvel.daySchedule.dayScheduleDTO.requset.DayScheduleRequest;
+import alt_t.truvel.daySchedule.dayScheduleDTO.requset.ScheduleRequest;
 
 import java.time.Duration;
 import java.time.LocalDate;
