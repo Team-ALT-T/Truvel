@@ -11,7 +11,6 @@ interface CalendarProps {
 }
 
 type WeekDay = "S" | "M" | "T" | "W" | "T" | "F" | "S";
-
 interface DateButtonProps {
   date: Date;
   isSelected: boolean;
