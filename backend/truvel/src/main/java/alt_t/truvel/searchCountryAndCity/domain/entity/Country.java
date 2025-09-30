@@ -22,9 +22,15 @@ public class Country {
     @Column(nullable = false, length = 100)
     private String english;
 
+    @Column(nullable = false)
+    private Long popularity = 0L;
 
     public Country(String korean, String english) {
         this.korean = korean;
         this.english = english;
+    }
+
+    public void incrementPopularity() {
+        this.popularity += 1;
     }
 }

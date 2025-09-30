@@ -244,7 +244,7 @@ class TravelPlanServiceUnitTest {
         given(travelPlanRepository.findById(travelPlanId)).willReturn(Optional.of(mockTravelPlan));
 
         // when
-        TravelPlanResponse response = travelPlanService.getTravelPlan(userId, travelPlanId);
+        TravelPlanResponse response = travelPlanService.getTravelPlan(travelPlanId);
 
         // then
         assertThat(response.getMessage()).isEqualTo("여행 일정 단건 조회 성공");
@@ -267,7 +267,7 @@ class TravelPlanServiceUnitTest {
         given(userRepository.findById(userId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> travelPlanService.getTravelPlan(userId, travelPlanId))
+        assertThatThrownBy(() -> travelPlanService.getTravelPlan(travelPlanId))
                 .isInstanceOf(RuntimeException.class)
                 .hasMessage("사용자를 찾을 수 없습니다.");
 
@@ -286,7 +286,7 @@ class TravelPlanServiceUnitTest {
         given(travelPlanRepository.findById(travelPlanId)).willReturn(Optional.empty());
 
         // when & then
-        assertThatThrownBy(() -> travelPlanService.getTravelPlan(userId, travelPlanId))
+        assertThatThrownBy(() -> travelPlanService.getTravelPlan(travelPlanId))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("여행 일정을 찾을 수 없습니다.");
 

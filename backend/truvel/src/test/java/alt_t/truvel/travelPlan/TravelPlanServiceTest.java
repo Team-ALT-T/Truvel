@@ -157,7 +157,7 @@ class TravelPlanServiceTest {
                 .orElseThrow(() -> new IllegalArgumentException("여행 일정을 찾을 수 없습니다."));
 
         // when
-        TravelPlanResponse testResponse = travelPlanService.getTravelPlan(daiseek.getId(), savedTravelPlan1.getId());
+        TravelPlanResponse testResponse = travelPlanService.getTravelPlan(savedTravelPlan1.getId());
 
         // then
         assertThat(testResponse.getTravelPlanId()).isEqualTo(response1.getTravelPlanId());

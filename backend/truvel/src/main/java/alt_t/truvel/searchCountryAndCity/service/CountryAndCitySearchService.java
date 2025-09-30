@@ -16,7 +16,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+@Transactional
 public class CountryAndCitySearchService {
 
     private final CityRepository cityRepository;
@@ -28,12 +28,12 @@ public class CountryAndCitySearchService {
      * @param keyword : 사용자가 입력한 국가 이름
      * @return :
      */
-    public List<CountrySearchResponse> searchCountries(String keyword) {
+    public List<CountrySearchResponse> searchCountries(String keyword)  {
         List<Country> countries;
 
-        // 키워드가 없으면 모든 국가 반환
+        // 키워드가 없으면 인기도가 높은 10개 국가 반환
         if (keyword == null || keyword.trim().isEmpty()) {
-            countries = countryRepository.findAll();
+            countries = getTop10CountriesByPopularity();
 
             // 키워드가 있으면 검색 로직
         } else {
@@ -45,8 +45,19 @@ public class CountryAndCitySearchService {
             }
         }
         // 검색된 모든 요소들을 리스트 형태로 반환
-        return countries.stream()
+        return countries.stream().peek(Country::incrementPopularity)
                 .map(CountrySearchResponse::from)
+                .toList();
+    }
+
+    /**
+     * 인기도가 높은 상위 10개 국가를 반환하는 메서드
+     * @return : 인기도가 높은 10개 국가 리스트
+     */
+    private List<Country> getTop10CountriesByPopularity() {
+        return countryRepository.findAll().stream()
+                .sorted((c1, c2) -> Long.compare(c2.getPopularity(), c1.getPopularity()))
+                .limit(10)
                 .toList();
     }
 
@@ -83,7 +94,7 @@ public class CountryAndCitySearchService {
                 }
             }
         }
-        return cities.stream()
+        return cities.stream().peek(City::incrementPopularity)
                 .map(CitySearchResponse::from)
                 .toList();
     }

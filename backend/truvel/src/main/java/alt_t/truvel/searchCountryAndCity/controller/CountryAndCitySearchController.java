@@ -17,6 +17,10 @@ public class CountryAndCitySearchController {
 
     private final CountryAndCitySearchService countryAndCitySearchService; // 서비스 주입
 
+    /**
+     * 모든 국가를 조회하는 메서드
+     */
+
 
     /**
      * 국가를 검색하는 메서드

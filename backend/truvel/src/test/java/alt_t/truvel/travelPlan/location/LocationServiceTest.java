@@ -1,5 +1,6 @@
 package alt_t.truvel.travelPlan.location;
 
+import alt_t.truvel.location.PlaceCategory;
 import alt_t.truvel.location.domain.entity.Location;
 import alt_t.truvel.location.domain.repository.LocationRepository;
 import alt_t.truvel.location.locationDto.request.LocationSaveRequestDto;
@@ -57,14 +58,14 @@ class LocationServiceTest {
     void saveSelectedPlaces_savesLocationsAndReturnsDtos() {
         // given
         List<LocationSaveRequestDto> requestDtos = List.of(
-                new LocationSaveRequestDto("서울타워", 37.5512f, 126.9882f, "서울특별시 용산구 남산공원길 105")
+                new LocationSaveRequestDto("서울타워", 37.5512, 126.9882, "서울특별시 용산구 남산공원길 105", PlaceCategory.DEFAULT)
         );
 
         when(locationRepository.save(any(Location.class)))
                 .thenAnswer(invocation -> {
                     Location loc = invocation.getArgument(0);
                     // 테스트 전용 생성자 사용
-                    return new Location(1L, loc.getPlace(), loc.getLatitude(), loc.getLongitude(), loc.getAddress());
+                    return new Location(1L, loc.getName(),loc.getAddress(),loc.getCategory() ,loc.getLatitude(), loc.getLongitude());
                 });
 
         // when

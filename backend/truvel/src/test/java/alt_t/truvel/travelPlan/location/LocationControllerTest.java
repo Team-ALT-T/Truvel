@@ -1,5 +1,6 @@
 package alt_t.truvel.travelPlan.location;
 
+import alt_t.truvel.location.PlaceCategory;
 import alt_t.truvel.location.controller.LocationController;
 import alt_t.truvel.location.locationDto.request.LocationSaveRequestDto;
 import alt_t.truvel.location.locationDto.response.GooglePlaceResultDto;
@@ -71,7 +72,7 @@ class LocationControllerTest {
     void saveMultipleLocations_returnsSavedResults() throws Exception {
         // given
         List<LocationSaveRequestDto> requestDtos = List.of(
-                new LocationSaveRequestDto("서울타워", 37.5512f, 126.9882f, "서울특별시 용산구 남산공원길 105")
+                new LocationSaveRequestDto("서울타워", 37.5512, 126.9882, "서울특별시 용산구 남산공원길 105", PlaceCategory.DEFAULT)
         );
 
         List<LocationResponseDto> responseDtos = List.of(
