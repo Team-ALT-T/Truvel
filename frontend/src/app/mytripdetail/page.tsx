@@ -324,7 +324,7 @@ const TravelItineraryApp: React.FC = () => {
       {/* 메모 추가 모달 */}
       {showMemoModal && (
         <S.Modal onClick={() => setShowMemoModal(false)}>
-          <S.ModalContent onClick={(e: any) => e.stopPropagation()}>
+          <S.ModalContent onClick={(e: React.MouseEvent) => e.stopPropagation()}>
             <S.ModalHeader>
               <S.ModalTitle>메모</S.ModalTitle>
               <S.CloseButton onClick={() => setShowMemoModal(false)}>
@@ -334,7 +334,7 @@ const TravelItineraryApp: React.FC = () => {
             <S.TextArea
               placeholder="메모내용"
               value={memoText}
-              onChange={(e: any) => setMemoText(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setMemoText(e.target.value)}
             />
             <S.ModalButton onClick={saveMemo}>추가</S.ModalButton>
           </S.ModalContent>

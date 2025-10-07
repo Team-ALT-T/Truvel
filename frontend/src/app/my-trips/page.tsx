@@ -63,15 +63,15 @@ const MyTripsPage = () => {
     setPastTrips(data.past)
   }, [])
 
-  const handleRegisterClick = () => {
-    router.push('/register')
+  const handlePopularClick = () => {
+    router.push('my-trips/popular')
   }
 
   return (
     <PageContainer>
       <Inner>
         <Header>내 여행</Header>
-        <RegisterButton onClick={handleRegisterClick}>여행 등록하기</RegisterButton>
+        <RegisterButton onClick={handlePopularClick}>여행 등록하기</RegisterButton>
 
         <Section>
           <SectionTitle>예정된 여행</SectionTitle>
