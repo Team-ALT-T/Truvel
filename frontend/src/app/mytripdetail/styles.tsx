@@ -86,10 +86,12 @@ export const TabContainer = ({ children, ...props }: any) => (
 export const Tab = ({
   active,
   children,
+  onClick,
   ...props
 }: {
   active?: boolean;
   children: React.ReactNode;
+  onClick?: () => void;
 }) => (
   <button
     style={{
@@ -102,6 +104,7 @@ export const Tab = ({
       backgroundColor: active ? "#3CA6FF" : "#f0f0f0",
       color: active ? "#fff" : "#666",
     }}
+    onClick={onClick}
     {...props}
   >
     {children}
