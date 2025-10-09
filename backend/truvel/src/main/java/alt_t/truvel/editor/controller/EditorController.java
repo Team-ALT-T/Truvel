@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import alt_t.truvel.editor.service.EditorService;
 import alt_t.truvel.travelPlan.dto.TravelPlanResponse;
+import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,6 +27,7 @@ public class EditorController {
      * @return 검색된 사용자 목록
      */
     @GetMapping("/editors")
+    @Operation(summary = "사용자 검색", description = "닉네임으로 사용자를 검색합니다.")
     public ResponseEntity<EditorSearchResponse> searchUsers(
             @RequestParam String nickname) {
         EditorSearchResponse response = editorService.searchUsersByNickname(nickname);
@@ -42,6 +44,7 @@ public class EditorController {
      * @return 편집자 목록
      */
     @GetMapping("/travels/{travelPlanId}/editors")
+    @Operation(summary = "여행 계획 편집자 목록 조회", description = "특정 여행 계획의 편집자 목록을 조회합니다.")
     public ResponseEntity<List<EditorSearchResponse>> getTravelPlanEditors(
             @PathVariable Long travelPlanId) {
         List<EditorSearchResponse> editors = editorService.getEditors(travelPlanId);
@@ -56,6 +59,7 @@ public class EditorController {
      * @return 초대 결과
      */
     @PostMapping("/travels/{travelPlanId}/editors")
+    @Operation(summary = "여행 계획 편집자 추가", description = "특정 여행 계획에 편집자를 추가합니다. 편집자의 ID는 USER_ID 입니다.")
     public ResponseEntity<EditorAddResponse> inviteEditor(
             @PathVariable Long travelPlanId,
             @RequestBody EditorAddRequest request,
@@ -74,6 +78,7 @@ public class EditorController {
      * @return 여행 계획 목록
      */
     @GetMapping("/editors/{userId}/travels")
+    @Operation(summary = "사용자 여행 계획 목록 조회", description = "특정 사용자가 참여 중인 여행 계획 목록을 조회합니다.")
     public ResponseEntity<List<TravelPlanResponse>> getUserTravelPlans(
             @PathVariable Long userId) {
         List<TravelPlanResponse> travelPlans =
@@ -108,6 +113,7 @@ public class EditorController {
      * @return 수락 결과
      */
     @PutMapping("/editors/{editorId}/accept")
+    @Operation(summary = "여행 계획 초대 수락", description = "사용자가 받은 여행 계획 초대를 수락합니다.")
     public ResponseEntity<EditorAddResponse> acceptInvitation(
             @PathVariable Long editorId,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
