@@ -1,9 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   compiler: {
-    styledComponents: true, // ✅ 이거 꼭 추가해야 babel-plugin-styled-components 작동함
+    styledComponents: {
+      displayName: true,
+      ssr: true,
+    },
   },
-  reactStrictMode: true,
+  reactStrictMode: false, // React 19 호환성을 위해 비활성화
 }
 
 export default nextConfig
