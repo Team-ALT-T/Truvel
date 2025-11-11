@@ -31,6 +31,6 @@ public class Country {
     }
 
     public void incrementPopularity() {
-        this.popularity += 1;
+        this.popularity += 1L;
     }
 }

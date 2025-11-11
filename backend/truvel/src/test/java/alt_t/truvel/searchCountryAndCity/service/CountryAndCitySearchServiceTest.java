@@ -30,12 +30,17 @@ class CountryAndCitySearchServiceTest {
     }
 
     @Test
-    @DisplayName("없는 국가명으로 국가 조회 테스트")
+    @DisplayName("없는 국가명으로 국가 조회시 인기도 순으로 10개 출력 테스트")
     public void findCountriesByName_NotFound(){
         // 조회하여 인기도 올리기
         countryAndCitySearchService.searchCountries("베트남");
         countryAndCitySearchService.searchCountries("베트남");
         countryAndCitySearchService.searchCountries("베트남");
+        countryAndCitySearchService.searchCountries("베트남");
+        countryAndCitySearchService.searchCountries("베트남");
+        countryAndCitySearchService.searchCountries("베트남");
+        countryAndCitySearchService.searchCountries("스페인");
+        countryAndCitySearchService.searchCountries("스페인");
         countryAndCitySearchService.searchCountries("스페인");
         countryAndCitySearchService.searchCountries("스페인");
         countryAndCitySearchService.searchCountries("일본");
