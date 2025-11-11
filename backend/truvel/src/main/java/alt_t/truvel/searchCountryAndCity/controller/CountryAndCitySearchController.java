@@ -3,6 +3,8 @@ package alt_t.truvel.searchCountryAndCity.controller;
 import alt_t.truvel.searchCountryAndCity.dto.CitySearchResponse;
 import alt_t.truvel.searchCountryAndCity.service.CountryAndCitySearchService;
 import alt_t.truvel.searchCountryAndCity.dto.CountrySearchResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -13,6 +15,7 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
+@Tag(name = "국가 및 도시 검색 API", description = "국가 및 도시 검색 관련 API")
 public class CountryAndCitySearchController {
 
     private final CountryAndCitySearchService countryAndCitySearchService; // 서비스 주입
@@ -23,6 +26,7 @@ public class CountryAndCitySearchController {
      * @param keyword : 사용자가 입력한 국가 이름
      * @return : 검색된 국가들을 리스트 형태로 반환
      */
+    @Operation(summary = "국가 검색", description = "키워드로 국가를 검색합니다. 키워드가 없으면 모든 국가를 반환합니다.")
     @GetMapping("/search/countries")
     public ResponseEntity<List<CountrySearchResponse>> searchCountries(@RequestParam(required = false) String keyword) {
         List<CountrySearchResponse> countries = countryAndCitySearchService.searchCountries(keyword);
@@ -36,6 +40,7 @@ public class CountryAndCitySearchController {
      * @param keyword : 사용자가 입력한 도시 이름
      * @return : 검색된 도시를 리스트 형태로 반환
      */
+    @Operation(summary = "도시 검색", description = "국가 ID와 키워드로 도시를 검색합니다. 국가 ID가 없으면 모든 국가에서 검색합니다.")
     @GetMapping("/search/cities")
     public ResponseEntity<List<CitySearchResponse>> searchCities(
             @RequestParam(required = false) Long countryId,
