@@ -15,6 +15,8 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -31,6 +33,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @ActiveProfiles("test")
 class TravelPlanServiceTest {
 
+    private static final Logger log = LoggerFactory.getLogger(TravelPlanServiceTest.class);
     @Autowired private TravelPlanService travelPlanService;
     @Autowired private TravelPlanRepository travelPlanRepository;
     @Autowired private UserRepository userRepository;
@@ -69,6 +72,7 @@ class TravelPlanServiceTest {
         osaka = new City("오사카", "Osaka", japan);
         cityRepository.saveAll(List.of(incheon, osaka));
 
+
         // 2. 사용자 생성
         daiseek = User.builder()
                 .email("daiseek@example.com")
@@ -87,20 +91,18 @@ class TravelPlanServiceTest {
 
         // 3. 여행 일정 생성 후 저장 (TravelPlanRequest DTO 변경 반영)
         request1 = new TravelPlanRequest(
-                korea.getId(),      // countryId
-                incheon.getId(),    // cityId
+                incheon.getId(),      // cityId
                 LocalDate.of(2025, 1, 1),
                 LocalDate.of(2025, 1, 2)
         );
-        response1 = travelPlanService.createTravelPlan(daiseek.getId(), request1);
+        response1 = new TravelPlanResponse(travelPlanService.createTravelPlan(daiseek.getId(), request1));
 
         request2 = new TravelPlanRequest(
-                japan.getId(),      // countryId
                 osaka.getId(),      // cityId
                 LocalDate.of(2025, 2, 1),
                 LocalDate.of(2025, 2, 2)
         );
-        response2 = travelPlanService.createTravelPlan(daiseek.getId(), request2);
+        response2 = new TravelPlanResponse(travelPlanService.createTravelPlan(daiseek.getId(), request2));
     }
 
 
@@ -124,13 +126,12 @@ class TravelPlanServiceTest {
 
         // TravelPlanRequest 생성 방식 변경: builder() 대신 생성자 직접 호출
         TravelPlanRequest request = new TravelPlanRequest(
-                newCountry.getId(), // countryId
-                newCity.getId(),    // cityId
+                newCity.getId(), // countryId
                 LocalDate.of(2025, 3, 1),
                 LocalDate.of(2025, 3, 5));
 
         // when
-        TravelPlanResponse response = travelPlanService.createTravelPlan(daiseek.getId(), request);
+        TravelPlanResponse response = new TravelPlanResponse("여행 일정이 생성되었습니다", travelPlanService.createTravelPlan(daiseek.getId(), request));
 
         // then
         // 생성된 여행 일정이 DB에 존재하는지 확인
@@ -157,7 +158,7 @@ class TravelPlanServiceTest {
                 .orElseThrow(() -> new IllegalArgumentException("여행 일정을 찾을 수 없습니다."));
 
         // when
-        TravelPlanResponse testResponse = travelPlanService.getTravelPlan(daiseek.getId(), savedTravelPlan1.getId());
+        TravelPlanResponse testResponse = travelPlanService.getTravelPlan(savedTravelPlan1.getId());
 
         // then
         assertThat(testResponse.getTravelPlanId()).isEqualTo(response1.getTravelPlanId());

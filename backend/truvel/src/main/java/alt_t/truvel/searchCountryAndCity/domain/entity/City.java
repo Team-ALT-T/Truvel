@@ -29,6 +29,9 @@ public class City {
     @JoinColumn(name = "country_id", nullable = false)
     private Country country;
 
+    @Column(nullable = false)
+    private Long popularity = 0L;
+
     /**
      * City 엔티티 생성자
      * @param korean : 도시 한국어명
@@ -39,5 +42,13 @@ public class City {
         this.korean = korean;
         this.english = english;
         this.country = country;
+    }
+
+    /**
+     * 도시의 인기도를 1 증가시키는 메서드
+     */
+    public void incrementPopularity() {
+        this.country.incrementPopularity(); // 국가의 인기도도 함께 증가
+        this.popularity += 1;
     }
 }
