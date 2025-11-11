@@ -9,6 +9,7 @@ import alt_t.truvel.auth.jwt.JwtToken;
 import alt_t.truvel.auth.jwt.JwtUtil;
 import alt_t.truvel.auth.user.domain.entity.User;
 import alt_t.truvel.auth.user.domain.repository.UserRepository;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import lombok.RequiredArgsConstructor;
@@ -90,6 +91,14 @@ public class JwtAuthService {
             if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
                 log.warn("비밀번호 불일치. 입력된 이메일: {}", request.getEmail());
                 throw new BadCredentialsException("비밀번호가 일치하지 않습니다.");
+            }
+
+            // 이메일 인증이 완료된 사용자인지 확인
+            if (user.getEmailVerified()){
+                log.info("이메일 인증 완료 사용자 로그인: {}", request.getEmail());
+            } else {
+                log.warn("이메일 인증되지 않은 사용자 로그인 시도: {}", request.getEmail());
+                throw new RuntimeException("이메일 인증이 완료되지 않은 사용자입니다.");
             }
 
             // 사용자 아이디로 JWT 액세스/리프레시 토큰 생성

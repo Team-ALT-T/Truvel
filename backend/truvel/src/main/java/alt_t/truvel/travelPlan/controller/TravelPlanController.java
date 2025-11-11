@@ -4,6 +4,8 @@ import alt_t.truvel.auth.security.UserPrincipal;
 import alt_t.truvel.travelPlan.dto.TravelPlanRequest;
 import alt_t.truvel.travelPlan.dto.TravelPlanResponse;
 import alt_t.truvel.travelPlan.service.TravelPlanService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +17,7 @@ import java.util.List;
 
 @RequiredArgsConstructor // 생성자 주입
 @RestController
+@Tag(name = "여행 일정 API", description = "여행 일정 생성 및 조회 관련 API")
 public class TravelPlanController {
 
     private final TravelPlanService travelPlanService;
@@ -26,6 +29,7 @@ public class TravelPlanController {
      * @param request : 클라이언트의 요청
      * @return : 응답과 함께 201 코드 반환
      */
+    @Operation(summary = "여행 일정 생성", description = "새로운 여행 일정을 생성합니다.")
     @PostMapping("/travels")
     public ResponseEntity<TravelPlanResponse> createTravelPlan(@AuthenticationPrincipal UserPrincipal userPrincipal, @RequestBody TravelPlanRequest request) {
         Long userId = userPrincipal.getId();
@@ -39,6 +43,7 @@ public class TravelPlanController {
      * @param userPrincipal : 인증된 사용자의 객체
      * @return : 여행 일정 목록을 리스트 형태로 반환
      */
+    @Operation(summary = "여행 일정 목록 조회", description = "사용자의 모든 여행 일정을 조회합니다.")
     @GetMapping("/travels")
     public ResponseEntity<List<TravelPlanResponse>> getTravelPlans(@AuthenticationPrincipal UserPrincipal userPrincipal) {
         Long userId = userPrincipal.getId();
@@ -54,6 +59,7 @@ public class TravelPlanController {
      * @param travelPlanId : 조회하려는 여행 일정의 아이디
      * @return : 여행 일정 단건을 반환
      */
+    @Operation(summary = "여행 일정 단건 조회", description = "특정 여행 일정을 조회합니다.")
     @GetMapping("/travels/{travelPlanId}")
     public ResponseEntity<TravelPlanResponse> getTravelPlan(@AuthenticationPrincipal UserPrincipal userPrincipal, @PathVariable Long travelPlanId) {
         Long userId = userPrincipal.getId();
