@@ -1,0 +1,25 @@
+spring:
+  datasource:
+    # h2 데이터베이스를 인메모리 형식으로 적용
+    url: jdbc:h2:mem:truvel-testDB;DB_CLOSE_DELAY=-1;MODE=MySQL
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create-drop # 테스트 종료후 바로 데이터 삭제
+    show-sql: true # 쿼리 실행 시 콘솔에 출력
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+logging:
+  level:
+    org.springframework: INFO
+    mylog_backend.mylog: DEBUG
+    org.hibernate.SQL: DEBUG
