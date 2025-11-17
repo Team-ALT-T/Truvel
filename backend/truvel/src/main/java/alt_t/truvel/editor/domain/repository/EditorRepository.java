@@ -16,7 +16,7 @@ import java.util.Optional;
 @Repository
 public interface EditorRepository extends JpaRepository<Editor, Long> {
 
-    // 여행 계획의 모든 편집자를 조회하는 메서드
+    // 특정 여행 계획의 모든 편집자를 조회하는 메서드
     List<Editor> findByTravelPlan(TravelPlan travelPlan);
 
     // 사용자가 편집자로 참여한 모든 여행 계획을 조회하는 메서드
