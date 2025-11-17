@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import styled from 'styled-components';
+import { useLogin } from '@/lib/hooks/useAuth';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -77,6 +78,10 @@ const EmailInput = styled.input<{ $hasError: boolean }>`
     border-color: #3b82f6;
     box-shadow: 0 0 0 2px rgba(59,130,246,0.1);
   }
+`;
+
+const PasswordInput = styled(EmailInput)`
+  margin-top: 12px;
 `;
 
 const ErrorMessage = styled.p`
@@ -189,21 +194,54 @@ const AppleButton = styled(SocialButton)`
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [isValidEmail, setIsValidEmail] = useState(false);
-  const [showError, setShowError] = useState(false);
+  const [showEmailError, setShowEmailError] = useState(false);
+  const [loginError, setLoginError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  const loginMutation = useLogin();
 
   const validateEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const v = e.target.value;
     setEmail(v);
+    setLoginError('');
     if (v.length > 0) {
       const ok = validateEmail(v);
       setIsValidEmail(ok);
-      setShowError(!ok);
+      setShowEmailError(!ok);
     } else {
       setIsValidEmail(false);
-      setShowError(false);
+      setShowEmailError(false);
+    }
+  };
+
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
+    setLoginError('');
+  };
+
+  const handleLogin = async () => {
+    if (!isValidEmail || !password) {
+      setLoginError('이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    setLoginError('');
+
+    try {
+      await loginMutation.mutateAsync({
+        email,
+        password,
+      });
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || '로그인에 실패했습니다.';
+      setLoginError(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -213,9 +251,10 @@ export default function LoginPage() {
   };
 
   const handleSignup = () => {
-    // TODO: 회원가입 페이지로 이동
     window.location.href = '/auth/register';
   };
+
+  const isFormValid = isValidEmail && password.length > 0;
 
   return (
     <Container>
@@ -235,15 +274,29 @@ export default function LoginPage() {
               value={email}
               onChange={handleEmailChange}
               placeholder="example@mtr.com"
-              $hasError={showError}
+              $hasError={showEmailError}
             />
-            {showError && (
+            {showEmailError && (
               <ErrorMessage>형식에 맞지 않은 이메일 주소예요</ErrorMessage>
+            )}
+            <PasswordInput
+              type="password"
+              value={password}
+              onChange={handlePasswordChange}
+              placeholder="비밀번호를 입력해주세요"
+              $hasError={false}
+            />
+            {loginError && (
+              <ErrorMessage>{loginError}</ErrorMessage>
             )}
           </InputContainer>
 
-          <ContinueButton disabled={!isValidEmail} $isValid={isValidEmail}>
-            계속하기
+          <ContinueButton 
+            disabled={!isFormValid || isLoading} 
+            $isValid={isFormValid && !isLoading}
+            onClick={handleLogin}
+          >
+            {isLoading ? '로그인 중...' : '로그인'}
           </ContinueButton>
           <SignupButton onClick={handleSignup}>회원가입</SignupButton>
         </LoginSection>

@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Image from 'next/image';
+import { useSearchParams } from 'next/navigation';
+import { useSendVerificationCode, useVerifyEmailCode } from '@/lib/hooks/useAuth';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -123,6 +125,16 @@ const ResendLink = styled.button`
   cursor: pointer;
   margin-bottom: 24px;
   
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+const ErrorText = styled.p`
+  font-size: 14px;
+  margin: 0;
+  text-align: center;
 `;
 
 const VerifyButton = styled.button<{ $isValid: boolean }>`
@@ -140,16 +152,61 @@ const VerifyButton = styled.button<{ $isValid: boolean }>`
 `;
 
 export default function VerifyPage() {
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
   const [isVerificationValid, setIsVerificationValid] = useState(false);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  const sendCodeMutation = useSendVerificationCode();
+  const verifyCodeMutation = useVerifyEmailCode();
+
+  // 이메일 발송
+  const handleSendEmail = async (emailToSend: string) => {
+    if (!emailToSend) {
+      setError('이메일 주소가 없습니다.');
+      return;
+    }
+
+    setIsSending(true);
+    setError('');
+
+    try {
+      await sendCodeMutation.mutateAsync(emailToSend);
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || '이메일 발송에 실패했습니다.';
+      setError(errorMessage);
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // 이메일 주소 가져오기 (URL 파라미터 또는 localStorage)
+  useEffect(() => {
+    const emailParam = searchParams.get('email');
+    const storedEmail = typeof window !== 'undefined' ? localStorage.getItem('pendingVerificationEmail') : null;
+    const userEmail = emailParam || storedEmail || '';
+    setEmail(userEmail);
+
+    // 페이지 로드 시 자동으로 이메일 발송
+    if (userEmail) {
+      handleSendEmail(userEmail);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   // 인증 코드 입력 처리
   const handleVerificationCodeChange = (index: number, value: string) => {
+    // 숫자만 입력 가능
+    if (value && !/^\d$/.test(value)) return;
     if (value.length > 1) return; // 한 글자만 입력 가능
     
     const newCode = [...verificationCode];
     newCode[index] = value;
     setVerificationCode(newCode);
+    setError('');
     
     // 모든 필드가 채워졌는지 확인
     const isComplete = newCode.every(code => code !== '');
@@ -165,14 +222,37 @@ export default function VerifyPage() {
   };
 
   const handleResendEmail = () => {
-    // TODO: 이메일 재전송 로직 구현
-    console.log('이메일 재전송');
+    if (email) {
+      handleSendEmail(email);
+    }
   };
 
-  const handleVerify = () => {
-    if (isVerificationValid) {
-      // 완료 페이지로 이동
-      window.location.href = '/auth/success';
+  const handleVerify = async () => {
+    if (!isVerificationValid || !email) {
+      setError('인증 코드를 모두 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    const code = verificationCode.join('');
+
+    try {
+      await verifyCodeMutation.mutateAsync({ email, code });
+      // 인증 성공 시 localStorage에서 이메일 제거
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('pendingVerificationEmail');
+      }
+      // useVerifyEmailCode 훅에서 자동으로 성공 페이지로 이동
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.message || error?.message || '인증에 실패했습니다.';
+      setError(errorMessage);
+      // 에러 시 코드 초기화
+      setVerificationCode(['', '', '', '', '', '']);
+      setIsVerificationValid(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -192,8 +272,14 @@ export default function VerifyPage() {
         <VerificationContainer>
           <VerificationTitle>인증코드를 보내드렸어요</VerificationTitle>
           <VerificationSubtitle>
-            입력해주신 이메일 example@mtr.com 로 인증코드를 보내드렸어요
+            입력해주신 이메일 {email || 'example@mtr.com'} 로 인증코드를 보내드렸어요
           </VerificationSubtitle>
+          {error && (
+            <ErrorText style={{ marginBottom: '16px', color: '#ef4444' }}>{error}</ErrorText>
+          )}
+          {isSending && (
+            <ErrorText style={{ marginBottom: '16px', color: '#3b82f6' }}>이메일을 발송 중입니다...</ErrorText>
+          )}
           
           <CodeInputContainer>
             {verificationCode.map((code, index) => (
@@ -216,12 +302,16 @@ export default function VerifyPage() {
             ))}
           </CodeInputContainer>
           
-          <ResendLink onClick={handleResendEmail}>
-            인증메일 다시 보내기
+          <ResendLink onClick={handleResendEmail} disabled={isSending}>
+            {isSending ? '발송 중...' : '인증메일 다시 보내기'}
           </ResendLink>
           
-          <VerifyButton $isValid={isVerificationValid} onClick={handleVerify}>
-            인증하기
+          <VerifyButton 
+            $isValid={isVerificationValid && !isLoading} 
+            onClick={handleVerify}
+            disabled={!isVerificationValid || isLoading}
+          >
+            {isLoading ? '인증 중...' : '인증하기'}
           </VerifyButton>
         </VerificationContainer>
       </Content>
