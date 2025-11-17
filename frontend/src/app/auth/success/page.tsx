@@ -105,7 +105,7 @@ const HomeButton = styled.button`
 export default function SuccessPage() {
   const handleGoHome = () => {
     // 홈 화면으로 이동
-    window.location.href = '/';
+    window.location.href = '/my-trips';
   };
 
   return (
@@ -118,7 +118,7 @@ export default function SuccessPage() {
             <Image src="/icons/plane.png" alt="비행기" width={160} height={160} />
           </PlaneImage>
           
-          <SuccessMessage>회원가입이 완료되었어요!</SuccessMessage>
+          <SuccessMessage>회원가입,로그인이 완료되었어요!</SuccessMessage>
           
           <HomeButton onClick={handleGoHome}>
             홈 화면으로

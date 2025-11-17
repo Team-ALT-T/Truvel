@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import styled from 'styled-components';
 import Image from 'next/image';
+import { useSignup } from '@/lib/hooks/useAuth';
 
 const Container = styled.div`
   min-height: 100vh;
@@ -321,6 +322,9 @@ export default function RegisterPage() {
     hasSpecial: false,
     hasLength: false,
   });
+  const [isLoading, setIsLoading] = useState(false);
+
+  const signupMutation = useSignup();
 
   // 약관 동의 처리
   const handleAllAgree = () => {
@@ -420,12 +424,38 @@ export default function RegisterPage() {
                      Object.values(passwordValid).every(Boolean) &&
                      formData.password === formData.confirmPassword;
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step === 'terms' && isTermsValid) {
       setStep('info');
     } else if (step === 'info' && validateForm()) {
-      // 이메일 인증 페이지로 이동
-      window.location.href = '/auth/verify';
+      setIsLoading(true);
+      setErrors({});
+
+      try {
+        await signupMutation.mutateAsync({
+          email: formData.email,
+          nickname: formData.nickname,
+          password: formData.password,
+          agreeTerms: agreements.service,
+          agreePrivacy: agreements.privacy,
+          agreeThirdParty: agreements.thirdParty,
+          locationConsent: agreements.location,
+        });
+        // 성공 시 useSignup 훅에서 자동으로 /auth/verify로 이동
+      } catch (error: any) {
+        const errorMessage = error?.response?.data?.message || error?.message || '회원가입에 실패했습니다.';
+        
+        // 에러 메시지를 적절한 필드에 매핑
+        if (errorMessage.includes('이메일')) {
+          setErrors({ email: errorMessage });
+        } else if (errorMessage.includes('닉네임')) {
+          setErrors({ nickname: errorMessage });
+        } else {
+          setErrors({ general: errorMessage });
+        }
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -617,8 +647,15 @@ export default function RegisterPage() {
               </InputGroup>
             </FormContainer>
 
-            <ContinueButton $isValid={Boolean(isFormValid)} onClick={handleNext}>
-              계속하기
+            {errors.general && (
+              <ErrorText style={{ marginBottom: '12px' }}>{errors.general}</ErrorText>
+            )}
+            <ContinueButton 
+              $isValid={Boolean(isFormValid) && !isLoading} 
+              onClick={handleNext}
+              disabled={!isFormValid || isLoading}
+            >
+              {isLoading ? '처리 중...' : '계속하기'}
             </ContinueButton>
           </>
         )}
