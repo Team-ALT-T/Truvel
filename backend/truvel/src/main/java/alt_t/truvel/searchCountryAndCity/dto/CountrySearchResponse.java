@@ -7,7 +7,6 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor
-@Builder
 public class CountrySearchResponse {
 
     private Long countryId;
@@ -15,23 +14,11 @@ public class CountrySearchResponse {
     private String englishName;
 
 
-    public CountrySearchResponse(Long countryId, String koreanName, String englishName) {
-        this.countryId = countryId;
-        this.koreanName = koreanName;
-        this.englishName = englishName;
+    public CountrySearchResponse(Country country) {
+        this.countryId = country.getId();
+        this.koreanName = country.getKorean();
+        this.englishName = country.getEnglish();
     }
 
 
-    /**
-     * 검색된 국가를 담아내는 정적 메서드
-     * @param country : 검색된 국가
-     * @return : CountrySearchResponse를 가공
-     */
-    public static CountrySearchResponse from(Country country) {
-        return CountrySearchResponse.builder()
-                .countryId(country.getId())
-                .koreanName(country.getKorean())
-                .englishName(country.getEnglish())
-                .build();
-    }
 }

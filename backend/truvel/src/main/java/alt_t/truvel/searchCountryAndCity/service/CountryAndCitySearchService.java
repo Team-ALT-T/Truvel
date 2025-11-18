@@ -33,7 +33,7 @@ public class CountryAndCitySearchService {
 
         // 키워드가 없으면 인기도가 높은 10개 국가 반환
         if (keyword == null || keyword.trim().isEmpty()) {
-            countries = getTop10CountriesByPopularity();
+            countries = countryRepository.findAll();
 
             // 키워드가 있으면 검색 로직
         } else {
@@ -46,21 +46,24 @@ public class CountryAndCitySearchService {
         }
         // 검색된 모든 요소들을 리스트 형태로 반환
         return countries.stream().peek(Country::incrementPopularity)
-                .map(CountrySearchResponse::from)
+                .map(CountrySearchResponse::new)
                 .toList();
     }
 
     /**
-     * 인기도가 높은 상위 10개 국가를 반환하는 메서드
-     * @return : 인기도가 높은 10개 국가 리스트
+     * 인기도가 높은 상위 10개 도시를 반환하는 메서드
+     * @return : 인기도가 높은 10개 도시 리스트
      */
-    private List<Country> getTop10CountriesByPopularity() {
-        return countryRepository.findAll().stream()
+    public List<CitySearchResponse> getTop10CitiesByPopularity() {
+        return cityRepository.findAll().stream()
                 .sorted((c1, c2) -> Long.compare(c2.getPopularity(), c1.getPopularity()))
                 .limit(10)
+                .map(city -> {
+                    city.incrementPopularity(); // 인기도 증가
+                    return CitySearchResponse.from(city);
+                })
                 .toList();
     }
-
 
     /**
      * 도시를 검색하는 메서드
