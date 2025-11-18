@@ -33,7 +33,7 @@ public class TravelPlanController {
     @PostMapping("/travels")
     public ResponseEntity<TravelPlanResponse> createTravelPlan(@AuthenticationPrincipal UserPrincipal userPrincipal, @RequestBody TravelPlanRequest request) {
         Long userId = userPrincipal.getId();
-        TravelPlanResponse response = travelPlanService.createTravelPlan(userId, request);
+        TravelPlanResponse response = new TravelPlanResponse(travelPlanService.createTravelPlan(userId, request));
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 

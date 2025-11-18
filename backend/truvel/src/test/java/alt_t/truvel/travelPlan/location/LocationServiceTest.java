@@ -57,14 +57,14 @@ class LocationServiceTest {
     void saveSelectedPlaces_savesLocationsAndReturnsDtos() {
         // given
         List<LocationSaveRequestDto> requestDtos = List.of(
-                new LocationSaveRequestDto("서울타워", 37.5512f, 126.9882f, "서울특별시 용산구 남산공원길 105")
+                new LocationSaveRequestDto("서울타워", 37.5512, 126.9882, "서울특별시 용산구 남산공원길 105", null)
         );
 
         when(locationRepository.save(any(Location.class)))
                 .thenAnswer(invocation -> {
                     Location loc = invocation.getArgument(0);
                     // 테스트 전용 생성자 사용
-                    return new Location(1L, loc.getPlace(), loc.getLatitude(), loc.getLongitude(), loc.getAddress());
+                    return new Location(1L, loc.getName(), loc.getAddress(), loc.getCategory(), loc.getLatitude(), loc.getLongitude());
                 });
 
         // when

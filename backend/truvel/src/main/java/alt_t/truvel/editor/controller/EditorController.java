@@ -29,7 +29,7 @@ public class EditorController {
      * @return 검색된 사용자 목록
      */
     @Operation(summary = "사용자 검색", description = "닉네임으로 저장된 사용자 정보를 검색합니다.")
-    @GetMapping("/editors")
+    @GetMapping("/editors/searchUser")
     public ResponseEntity<EditorSearchResponse> searchUsers(
             @RequestParam String nickname) {
         EditorSearchResponse response = editorService.searchUsersByNickname(nickname);

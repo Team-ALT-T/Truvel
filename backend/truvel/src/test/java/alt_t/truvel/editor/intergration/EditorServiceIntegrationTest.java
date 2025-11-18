@@ -1,4 +1,4 @@
-package alt_t.truvel.editor;
+package alt_t.truvel.editor.intergration;
 
 import alt_t.truvel.auth.user.domain.entity.User;
 import alt_t.truvel.auth.user.domain.repository.UserRepository;

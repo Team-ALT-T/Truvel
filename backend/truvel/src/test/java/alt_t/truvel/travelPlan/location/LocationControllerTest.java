@@ -1,5 +1,6 @@
 package alt_t.truvel.travelPlan.location;
 
+import alt_t.truvel.auth.JwtAuthenticationFilter;
 import alt_t.truvel.location.controller.LocationController;
 import alt_t.truvel.location.locationDto.request.LocationSaveRequestDto;
 import alt_t.truvel.location.locationDto.response.GooglePlaceResultDto;
@@ -9,9 +10,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,8 +28,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(LocationController.class)
-@Import(LocationControllerTest.TestMockConfig.class)
+@WebMvcTest(controllers = LocationController.class, excludeFilters = {
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthenticationFilter.class)
+})
+@AutoConfigureMockMvc(addFilters = false)
+@Import({LocationControllerTest.TestMockConfig.class})
 class LocationControllerTest {
 
     @TestConfiguration
@@ -71,7 +78,7 @@ class LocationControllerTest {
     void saveMultipleLocations_returnsSavedResults() throws Exception {
         // given
         List<LocationSaveRequestDto> requestDtos = List.of(
-                new LocationSaveRequestDto("서울타워", 37.5512f, 126.9882f, "서울특별시 용산구 남산공원길 105")
+                new LocationSaveRequestDto("서울타워", 37.5512, 126.9882, "서울특별시 용산구 남산공원길 105", null)
         );
 
         List<LocationResponseDto> responseDtos = List.of(

@@ -20,9 +20,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final JwtProvider jwtProvider;
-    private final RedisTemplate<String, String> redisTemplate;
-
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
 

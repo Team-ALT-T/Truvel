@@ -2,6 +2,7 @@ package alt_t.truvel.travelPlan.dto;
 
 import alt_t.truvel.daySchedule.dayScheduleDTO.response.DayScheduleResponse;
 import alt_t.truvel.daySchedule.domain.entity.DaySchedule;
+import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.NotNull;
 import lombok.Builder;
@@ -48,12 +49,34 @@ public class TravelPlanResponse {
         this.cityName = cityName;
         this.daySchedules = daySchedules;
     }
+    @Builder
+    public TravelPlanResponse(String message, TravelPlan travelPlan) {
+        this.message = message;
+        this.travelPlanId = travelPlan.getId();
+        this.startDate = null;
+        this.endDate = null;
+        this.countryName = null;
+        this.cityName = null;
+        this.daySchedules = null;
+    }
+
+    @Builder
+    public TravelPlanResponse(TravelPlan travelPlan){
+        this.message = null;
+        this.travelPlanId = travelPlan.getId();
+        this.startDate = travelPlan.getStartDate();
+        this.endDate = travelPlan.getEndDate();
+        this.countryName = travelPlan.getNationName();
+        this.cityName = travelPlan.getCityName();
+        this.daySchedules = travelPlan.getDaySchedules();
+    }
 
 
     /**
      * 여행 일정 생성시 사용
      * @return : 성공시 응답 메시지, DB에 저장된 여행 일정의 아이디 반환
      */
+
     public static TravelPlanResponse of(String message, Long travelPlanId) {
         return TravelPlanResponse.builder()
                 .message(message)

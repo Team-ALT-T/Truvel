@@ -22,7 +22,6 @@ import java.util.Collection;
  * 비교적 고수준의 jwt 작업 정의
  * 1. 토큰 유효성 판단
  */
-//@RequiredArgsConstructor
 @Component
 @Slf4j
 @RequiredArgsConstructor

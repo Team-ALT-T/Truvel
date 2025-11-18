@@ -23,7 +23,7 @@ public class ScheduleService {
     private final ScheduleRepository scheduleRepository;
     private final LocationRepository locationRepository;
 
-    public void createSchedule(DaySchedule daySchedule, List<ScheduleRequest> scheduleRequests){
+    public List<Schedule> createSchedule(DaySchedule daySchedule, List<ScheduleRequest> scheduleRequests){
         List<Schedule> schedules = new ArrayList<>();
         scheduleRequests.forEach(scheduleRequest -> {
             Location location = locationRepository.findByName(scheduleRequest.getLocationName())
@@ -36,7 +36,9 @@ public class ScheduleService {
 
         setStayTime(schedules);
         daySchedule.updateSchedules(scheduleRepository.saveAll(schedules));
+        return schedules;
     }
+
 
     // stayTime이 비어있으면 category에 맞춰 자동으로 stayTime을 설정해주는 함수
     private void setStayTime(List<Schedule> schedules){

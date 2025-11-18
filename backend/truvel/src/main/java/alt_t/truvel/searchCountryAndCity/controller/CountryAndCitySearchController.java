@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-@RestController
+@RestController("search")
 @RequiredArgsConstructor
 @Tag(name = "국가 및 도시 검색 API", description = "국가 및 도시 검색 관련 API")
 public class CountryAndCitySearchController {
@@ -27,7 +27,7 @@ public class CountryAndCitySearchController {
      * @return : 검색된 국가들을 리스트 형태로 반환
      */
     @Operation(summary = "국가 검색", description = "키워드로 국가를 검색합니다. 키워드가 없으면 모든 국가를 반환합니다.")
-    @GetMapping("/search/countries")
+    @GetMapping("/countries")
     public ResponseEntity<List<CountrySearchResponse>> searchCountries(@RequestParam(required = false) String keyword) {
         List<CountrySearchResponse> countries = countryAndCitySearchService.searchCountries(keyword);
         return ResponseEntity.ok(countries);
@@ -41,12 +41,23 @@ public class CountryAndCitySearchController {
      * @return : 검색된 도시를 리스트 형태로 반환
      */
     @Operation(summary = "도시 검색", description = "국가 ID와 키워드로 도시를 검색합니다. 국가 ID가 없으면 모든 국가에서 검색합니다.")
-    @GetMapping("/search/cities")
+    @GetMapping("/cities")
     public ResponseEntity<List<CitySearchResponse>> searchCities(
             @RequestParam(required = false) Long countryId,
             @RequestParam(required = false) String keyword) {
         List<CitySearchResponse> cities = countryAndCitySearchService.searchCities(countryId, keyword);
         return ResponseEntity.ok(cities);
+    }
+
+    /**
+     * 인기도가 높은 상위 10개 도시를 반환하는 메서드
+     * @return : 인기도가 높은 10개 도시 리스트
+     */
+    @Operation(summary = "인기 도시 조회", description = "인기도가 높은 상위 10개 도시를 반환합니다.")
+    @GetMapping("/top-cities")
+    public ResponseEntity<List<CitySearchResponse>> getTop10CitiesByPopularity() {
+        List<CitySearchResponse> topCities = countryAndCitySearchService.getTop10CitiesByPopularity();
+        return ResponseEntity.ok(topCities);
     }
 }
 

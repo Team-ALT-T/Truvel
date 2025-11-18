@@ -34,22 +34,20 @@ public class TravelPlanService {
      * @return : 응답 성공 메시지와 DB에 저장된 여행 일정의 아이디 반환
      */
     @Transactional
-    public TravelPlanResponse createTravelPlan(Long userId, TravelPlanRequest request) {
+    public TravelPlan createTravelPlan(Long userId, TravelPlanRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        City requestCity = cityRepository.findById(request.getCityId())
+                .orElseThrow(() -> new NoSuchElementException("City not found with ID: " + request.getCityId()));
 
         // TravelPlanRequest에서 받은 countryId와 cityId로 실제 Country, City 엔티티를 조회
-        Country nation = countryRepository.findById(request.getCountryId())
-                .orElseThrow(() -> new NoSuchElementException("Country not found with ID: " + request.getCountryId()));
-
-        City city = cityRepository.findById(request.getCityId())
-                .orElseThrow(() -> new NoSuchElementException("City not found with ID: " + request.getCityId()));
+        Country nation = requestCity.getCountry();
 
         // TravelPlanRequest의 toTravelPlan() 메서드 대신, TravelPlan.builder()를 사용하여 직접 생성
         TravelPlan travelPlan = TravelPlan.builder()
                 .nationId(nation) // DB에는 country_id가 저장되어 해당 데이터 조회시 Join연산으로 가져옴
-                .cityId(city) // city도 마찬가지
-                .cityName(city.getKorean())
+                .cityId(requestCity) // city도 마찬가지
+                .cityName(requestCity.getKorean())
                 .nationName(nation.getKorean())
                 .startDate(request.getStartDate())
                 .endDate(request.getEndDate())
@@ -58,9 +56,7 @@ public class TravelPlanService {
 
         user.addTravelPlan(travelPlan);
 
-        TravelPlan savedTravelPlan = travelPlanRepository.save(travelPlan);
-
-        return TravelPlanResponse.of("여행 일정이 생성되었습니다", savedTravelPlan.getId());
+        return travelPlanRepository.save(travelPlan);
     }
 
 

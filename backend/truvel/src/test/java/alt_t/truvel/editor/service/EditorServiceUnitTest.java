@@ -1,4 +1,4 @@
-package alt_t.truvel.editor;
+package alt_t.truvel.editor.service;
 
 import alt_t.truvel.auth.user.domain.entity.User;
 import alt_t.truvel.auth.user.domain.repository.UserRepository;
@@ -8,7 +8,6 @@ import alt_t.truvel.editor.dto.EditorAddResponse;
 import alt_t.truvel.editor.dto.EditorSearchResponse;
 import alt_t.truvel.editor.enums.EditorRole;
 import alt_t.truvel.editor.enums.InvitationStatus;
-import alt_t.truvel.editor.service.EditorService;
 import alt_t.truvel.searchCountryAndCity.domain.entity.City;
 import alt_t.truvel.searchCountryAndCity.domain.entity.Country;
 import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
@@ -25,7 +24,6 @@ import java.lang.reflect.Field;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,6 +59,7 @@ class EditorServiceUnitTest {
     void setUp() {
         // Mock 객체들 초기화
         mockOwnerUser = User.builder()
+                .id(1L)
                 .email("owner@example.com")
                 .password("password123")
                 .nickname("여행플래너")
@@ -76,11 +75,12 @@ class EditorServiceUnitTest {
         setId(mockEditorUser, 2L);
 
         mockSearchUser = User.builder()
+                .id(3L)
                 .email("search@example.com")
                 .password("password123")
                 .nickname("검색대상")
                 .build();
-        setId(mockSearchUser, 3L);
+//        setId(mockSearchUser, 3L);
 
         mockCountry = new Country("대한민국", "Korea");
         mockCity = new City("서울", "Seoul", mockCountry);
