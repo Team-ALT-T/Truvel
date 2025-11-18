@@ -1,5 +1,5 @@
 # 1. OpenJDK 21 이미지 사용
-FROM openjdk:21-jdk-slim
+FROM eclipse-temurin:21-jdk
 
 # 2. 작업 디렉토리 생성
 WORKDIR /backend
