@@ -1,10 +1,11 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import styled from 'styled-components'
 import TripCard from './components/TripCard'
+import { useTravelPlans } from '@/lib/hooks/useTravel'
 
 // 타입 정의
 interface Trip {
@@ -14,6 +15,7 @@ interface Trip {
   daysLeft?: string
   showPeople?: boolean
   peopleCount?: number
+  travelPlanId?: number
 }
 
 interface HoverIconProps {
@@ -26,45 +28,104 @@ interface HoverIconProps {
 
 const MyTripsPage = () => {
   const router = useRouter()
-  const [upcomingTrips, setUpcomingTrips] = useState<Trip[]>([])
-  const [pastTrips, setPastTrips] = useState<Trip[]>([])
+  const { data: travelPlans, isLoading, error } = useTravelPlans()
 
-  useEffect(() => {
-    const data = {
-      upcoming: [
-        {
-          title: '샌프란시스코 여행',
-          location: '미국, 샌프란시스코',
-          date: '2025.05.12 - 05.16',
-          daysLeft: '00일 남았어요!',
-          showPeople: true,
-          peopleCount: 3,
-        },
-        {
-          title: '도쿄 여행',
-          location: '일본, 도쿄',
-          date: '2025.07.12 - 07.14',
-          daysLeft: '00일 남았어요!',
-          showPeople: true,
-          peopleCount: 1,
-        },
-      ],
-      past: [
-        {
-          title: '샌프란시스코 여행',
-          location: '미국, 샌프란시스코',
-          date: '2024.05.12 - 05.16',
-          showPeople: true,
-          peopleCount: 3,
-        },
-      ],
-    }
-    setUpcomingTrips(data.upcoming)
-    setPastTrips(data.past)
-  }, [])
+  // 날짜 포맷팅 함수
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString)
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${date.getFullYear()}.${month}.${day}`
+  }
+
+  // 날짜 범위 포맷팅 함수
+  const formatDateRange = (startDate: string, endDate: string): string => {
+    const start = formatDate(startDate)
+    const end = formatDate(endDate)
+    // 연도 포함하여 표시
+    return `${start} - ${end}`
+  }
+
+  // 남은 일수 계산 함수
+  const calculateDaysLeft = (endDate: string): string => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const end = new Date(endDate)
+    end.setHours(0, 0, 0, 0)
+    const diffTime = end.getTime() - today.getTime()
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    
+    if (diffDays < 0) return ''
+    if (diffDays === 0) return '오늘 출발이에요!'
+    return `${diffDays}일 남았어요!`
+  }
+
+  // 여행 데이터를 Trip 형식으로 변환
+  const trips: Trip[] = useMemo(() => {
+    if (!travelPlans) return []
+    
+    return travelPlans.map((plan) => ({
+      title: `${plan.cityName} 여행`,
+      location: `${plan.countryName}, ${plan.cityName}`,
+      date: formatDateRange(plan.startDate, plan.endDate),
+      daysLeft: calculateDaysLeft(plan.endDate),
+      showPeople: true,
+      peopleCount: 1, // TODO: 실제 참여자 수 연동 필요
+      travelPlanId: plan.travelPlanId,
+    }))
+  }, [travelPlans])
+
+  // 예정된 여행과 지난 여행 구분
+  const { upcomingTrips, pastTrips } = useMemo(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const upcoming: Trip[] = []
+    const past: Trip[] = []
+
+    trips.forEach((trip) => {
+      if (!travelPlans) return
+      
+      const plan = travelPlans.find((p) => p.travelPlanId === trip.travelPlanId)
+      if (!plan) return
+
+      const endDate = new Date(plan.endDate)
+      endDate.setHours(0, 0, 0, 0)
+
+      if (endDate >= today) {
+        upcoming.push(trip)
+      } else {
+        past.push(trip)
+      }
+    })
+
+    return { upcomingTrips: upcoming, pastTrips: past }
+  }, [trips, travelPlans])
 
   const handlePopularClick = () => {
     router.push('my-trips/popular')
+  }
+
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <Inner>
+          <Header>내 여행</Header>
+          <LoadingMessage>여행 일정을 불러오는 중...</LoadingMessage>
+        </Inner>
+      </PageContainer>
+    )
+  }
+
+  if (error) {
+    return (
+      <PageContainer>
+        <Inner>
+          <Header>내 여행</Header>
+          <ErrorMessage>여행 일정을 불러오는데 실패했습니다.</ErrorMessage>
+        </Inner>
+      </PageContainer>
+    )
   }
 
   return (
@@ -75,20 +136,28 @@ const MyTripsPage = () => {
 
         <Section>
           <SectionTitle>예정된 여행</SectionTitle>
-          <TripList>
-            {upcomingTrips.map((trip, i) => (
-              <TripCard key={i} {...trip} />
-            ))}
-          </TripList>
+          {upcomingTrips.length > 0 ? (
+            <TripList>
+              {upcomingTrips.map((trip) => (
+                <TripCard key={trip.travelPlanId} {...trip} />
+              ))}
+            </TripList>
+          ) : (
+            <EmptyMessage>예정된 여행이 없습니다.</EmptyMessage>
+          )}
         </Section>
 
         <Section style={{ marginBottom: '6rem' }}>
           <SectionTitle>지난 여행</SectionTitle>
-          <TripList>
-            {pastTrips.map((trip, i) => (
-              <TripCard key={i} {...trip} />
-            ))}
-          </TripList>
+          {pastTrips.length > 0 ? (
+            <TripList>
+              {pastTrips.map((trip) => (
+                <TripCard key={trip.travelPlanId} {...trip} />
+              ))}
+            </TripList>
+          ) : (
+            <EmptyMessage>지난 여행이 없습니다.</EmptyMessage>
+          )}
         </Section>
       </Inner>
 
@@ -215,4 +284,23 @@ const Footer = styled.footer`
   border-top-left-radius: 1rem;
   border-top-right-radius: 1rem;
   box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
+`
+
+const LoadingMessage = styled.p`
+  text-align: center;
+  color: #777777;
+  margin-top: 2rem;
+`
+
+const ErrorMessage = styled.p`
+  text-align: center;
+  color: #ef4444;
+  margin-top: 2rem;
+`
+
+const EmptyMessage = styled.p`
+  text-align: center;
+  color: #777777;
+  font-size: 0.875rem;
+  padding: 2rem 0;
 `
