@@ -12,6 +12,7 @@ interface TripCardProps {
   daysLeft?: string
   showPeople?: boolean
   peopleCount?: number
+  travelPlanId?: number
 }
 
 export default function TripCard({
@@ -21,11 +22,17 @@ export default function TripCard({
   daysLeft,
   showPeople,
   peopleCount = 3,
+  travelPlanId,
 }: TripCardProps) {
   const router = useRouter()
 
   const handleClick = () => {
-    router.push(`/trips/${encodeURIComponent(title)}`)
+    if (travelPlanId) {
+      router.push(`/mytripdetail?id=${travelPlanId}`)
+    } else {
+      // fallback: travelPlanId가 없을 경우 (하위 호환성)
+      router.push(`/trips/${encodeURIComponent(title)}`)
+    }
   }
 
   return (

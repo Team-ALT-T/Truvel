@@ -1,70 +1,35 @@
 'use client'
 
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import styled from 'styled-components'
+import { useCountries, useCities } from '@/lib/hooks/useSearch'
+import { CitySearchResponse } from '@/lib/api/search'
 
 type City = {
-  id: string
+  id: string // cityId를 문자열로 변환
+  cityId: number // 실제 cityId
+  countryId: number
   name: string
   subtitle?: string
   image?: string
 }
 
 type CountrySection = {
-  id: string
+  id: string // countryId를 문자열로 변환
+  countryId: number // 실제 countryId
   country: string
   cities: City[]
 }
 
-const POPULAR_SPOTS: City[] = [
-  { id: 'tokyo', name: '도쿄', image: '/icons/plane-icon.png' },
-  { id: 'osaka', name: '오사카', image: '/icons/plane-icon.png' },
-  { id: 'paris', name: '파리', image: '/icons/plane-icon.png' },
-  { id: 'barcelona', name: '바르셀로나', image: '/icons/plane-icon.png' },
-  { id: 'bali', name: '발리', image: '/icons/plane-icon.png' },
-  { id: 'jeju', name: '제주', image: '/icons/plane-icon.png' },
-]
-
-const OVERSEAS: CountrySection[] = [
-  {
-    id: 'jp',
-    country: '일본',
-    cities: [
-      { id: 'tokyo', name: '도쿄', subtitle: '하코네, 요코하마, 가마쿠라' },
-      { id: 'fukuoka', name: '후쿠오카', subtitle: '유후인, 벳푸, 기타큐슈' },
-      { id: 'osaka', name: '오사카', subtitle: '교토, 고베, 나라' },
-      { id: 'kagoshima', name: '가고시마', subtitle: '이부스키, 기리시마, 야쿠시마' },
-      { id: 'shizuoka', name: '시즈오카', subtitle: '후지노미야, 이토, 하마마쓰' },
-      { id: 'nagoya', name: '나고야', subtitle: '다카야마, 시라카와고, 게로' },
-      { id: 'sapporo', name: '삿포로', subtitle: '하코다테, 오타루, 비에이, 노보리베츠' },
-      { id: 'okinawa', name: '오키나와' },
-    ],
-  },
-  {
-    id: 'sea',
-    country: '동남아시아',
-    cities: [
-      { id: 'danang', name: '다낭', subtitle: '호이안, 후에' },
-      { id: 'bangkok', name: '방콕' },
-      { id: 'bali', name: '발리' },
-      { id: 'singapore', name: '싱가포르' },
-    ],
-  },
-]
-
-const DOMESTIC: CountrySection[] = [
-  {
-    id: 'kr',
-    country: '대한민국',
-    cities: [
-      { id: 'seoul', name: '서울' },
-      { id: 'jeju', name: '제주' },
-      { id: 'busan', name: '부산' },
-      { id: 'gangneung', name: '강릉' },
-    ],
-  },
+// 인기 여행지 도시 ID 리스트 (실제 인기 여행지 기준으로 설정)
+// 도쿄, 오사카, 파리, 바르셀로나, 발리, 제주 등의 cityId
+// CountriesAndCities.json 기준으로 설정 (실제 DB의 cityId와 매칭 필요)
+const POPULAR_CITY_IDS: number[] = [
+  // 일본 도시들 (countryId: 1)
+  // 도쿄, 오사카 등 - 실제 cityId는 DB에서 확인 필요
+  // 일단 도시명으로 검색하여 cityId를 찾는 방식 사용
 ]
 
 const TAB_OPTIONS = ['해외 여행지', '국내 여행지'] as const
@@ -74,19 +39,149 @@ export default function PopularTripsPage() {
   const router = useRouter()
   const [activeTab, setActiveTab] = useState<TabKey>('해외 여행지')
   const [query, setQuery] = useState('')
-  const [selectedCityIds, setSelectedCityIds] = useState<string[]>([])
+  const [searchQuery, setSearchQuery] = useState('') // 실제 검색에 사용되는 쿼리 (엔터 키 또는 검색 아이콘 클릭 시)
+  const [selectedCountryId, setSelectedCountryId] = useState<number | null>(null) // 선택된 국가 ID
+  const [selectedCityIds, setSelectedCityIds] = useState<string[]>([]) // cityId를 문자열로 저장
 
+  // 검색 실행 함수
+  const handleSearch = () => {
+    setSearchQuery(query.trim())
+    if (query.trim()) {
+      setSelectedCountryId(null)
+    } else {
+      // 검색어가 비어있으면 전체 목록 표시
+      setSelectedCountryId(null)
+    }
+  }
+
+  // 국가 목록 조회 (검색어는 도시 검색에만 사용하고, 국가 목록은 항상 전체 조회)
+  const { data: countries, isLoading: countriesLoading } = useCountries(undefined)
+  
+  // 해외/국내 구분을 위한 국가 필터링
+  const filteredCountries = useMemo(() => {
+    if (!countries) return []
+    
+    if (activeTab === '해외 여행지') {
+      // 대한민국 제외
+      return countries.filter(c => c.koreanName !== '대한민국')
+    } else {
+      // 대한민국만
+      return countries.filter(c => c.koreanName === '대한민국')
+    }
+  }, [countries, activeTab])
+
+  // 대한민국 countryId 찾기 (국내 여행지 탭용)
+  const koreaCountryId = useMemo(() => {
+    if (!countries) return null
+    const korea = countries.find(c => c.koreanName === '대한민국')
+    return korea?.countryId || null
+  }, [countries])
+
+  // 도시 조회용 countryId 결정: 선택된 국가가 있으면 그것을, 없으면 탭에 따라 적절한 값 사용
+  const cityCountryId = useMemo(() => {
+    // 선택된 국가가 있으면 그것을 사용
+    if (selectedCountryId !== null) {
+      return selectedCountryId
+    }
+    // 선택된 국가가 없고 국내 여행지 탭이면 대한민국만
+    if (activeTab === '국내 여행지' && koreaCountryId) {
+      return koreaCountryId
+    }
+    // 해외 여행지 탭이면 undefined (모든 도시 가져온 후 필터링)
+    return undefined
+  }, [selectedCountryId, activeTab, koreaCountryId])
+
+  // 도시 목록 조회 (검색어를 API에 전달)
+  const { data: allCities, isLoading: citiesLoading } = useCities(
+    cityCountryId || undefined, // 탭에 따라 적절한 countryId 전달
+    searchQuery.trim() || undefined // 검색어가 있으면 API에 전달
+  )
+
+  // 인기 여행지용 도시 목록 조회 (검색어 없이 항상 전체 조회)
+  const { data: allCitiesForPopular, isLoading: popularCitiesLoading } = useCities(
+    undefined, // 모든 국가
+    undefined // 검색어 없음
+  )
+
+  // 국가별로 그룹화된 섹션 생성
   const sections = useMemo<CountrySection[]>(() => {
-    const base = activeTab === '해외 여행지' ? OVERSEAS : DOMESTIC
-    if (!query.trim()) return base
-    const q = query.trim().toLowerCase()
-    return base
-      .map((sec) => ({
-        ...sec,
-        cities: sec.cities.filter((c) => c.name.toLowerCase().includes(q)),
+    if (!countries || !allCities) return []
+
+    // API에서 이미 검색어로 필터링된 결과를 받으므로 추가 필터링 불필요
+    const citiesToUse = allCities
+
+    // 국가별로 그룹화
+    const countryMap = new Map<number, { countryId: number; countryName: string; cities: CitySearchResponse[] }>()
+    
+    citiesToUse.forEach(city => {
+      const country = countries.find(c => c.countryId === city.countryId)
+      if (!country) return
+
+      // 해외/국내 필터링
+      const isDomestic = country.koreanName === '대한민국'
+      if (activeTab === '해외 여행지' && isDomestic) return
+      if (activeTab === '국내 여행지' && !isDomestic) return
+
+      // 선택된 국가가 있으면 해당 국가의 도시만 포함
+      if (selectedCountryId !== null && city.countryId !== selectedCountryId) return
+
+      if (!countryMap.has(city.countryId)) {
+        countryMap.set(city.countryId, {
+          countryId: city.countryId,
+          countryName: country.koreanName,
+          cities: []
+        })
+      }
+      countryMap.get(city.countryId)!.cities.push(city)
+    })
+
+    // CountrySection 형식으로 변환
+    return Array.from(countryMap.values())
+      .sort((a, b) => a.countryName.localeCompare(b.countryName)) // 국가명 정렬
+      .map(countryData => ({
+        id: String(countryData.countryId),
+        countryId: countryData.countryId,
+        country: countryData.countryName,
+        cities: countryData.cities
+          .sort((a, b) => a.koreanName.localeCompare(b.koreanName)) // 도시명 정렬
+          .map(city => ({
+            id: String(city.cityId),
+            cityId: city.cityId,
+            countryId: city.countryId,
+            name: city.koreanName,
+            image: '/icons/blank.png',
+          }))
       }))
-      .filter((sec) => sec.cities.length > 0)
-  }, [activeTab, query])
+  }, [countries, allCities, activeTab, selectedCountryId, searchQuery])
+
+  // 인기 여행지 도시명 리스트 (API에서 가져온 도시 중에서 필터링)
+  const POPULAR_CITY_NAMES = ['도쿄', '오사카', '파리', '바르셀로나', '발리', '제주']
+  
+  // 인기 여행지 (검색어와 관계없이 항상 표시)
+  const popularSpots = useMemo<City[]>(() => {
+    if (!allCitiesForPopular) return []
+    
+    // 인기 도시명에 해당하는 도시들을 찾아서 반환
+    const popularCities = allCitiesForPopular
+      .filter(city => POPULAR_CITY_NAMES.includes(city.koreanName))
+      .slice(0, 6)
+      .map(city => ({
+        id: String(city.cityId),
+        cityId: city.cityId,
+        countryId: city.countryId,
+        name: city.koreanName,
+        image: '/icons/blank.png',
+      }))
+    
+    // 인기 도시명 순서대로 정렬
+    return popularCities.sort((a, b) => {
+      const indexA = POPULAR_CITY_NAMES.indexOf(a.name)
+      const indexB = POPULAR_CITY_NAMES.indexOf(b.name)
+      if (indexA === -1) return 1
+      if (indexB === -1) return -1
+      return indexA - indexB
+    })
+  }, [allCitiesForPopular])
 
   const onSelectCity = (city: City) => {
     setSelectedCityIds((prev) => {
@@ -99,12 +194,29 @@ export default function PopularTripsPage() {
   const clearSelected = () => setSelectedCityIds([])
 
   const selectedCities = useMemo(() => {
-    const dict = new Map<string, City>()
-    ;[...OVERSEAS, ...DOMESTIC].forEach((sec) => {
-      sec.cities.forEach((c) => dict.set(c.id, c))
+    if (!allCities) return []
+    
+    const cityMap = new Map<string, City>()
+    sections.forEach((sec) => {
+      sec.cities.forEach((c) => cityMap.set(c.id, c))
     })
-    return selectedCityIds.map((id) => dict.get(id)).filter(Boolean) as City[]
-  }, [selectedCityIds])
+    
+    return selectedCityIds
+      .map((id) => cityMap.get(id))
+      .filter(Boolean) as City[]
+  }, [selectedCityIds, sections, allCities])
+
+  const isLoading = countriesLoading || citiesLoading || popularCitiesLoading
+
+  if (isLoading) {
+    return (
+      <PageContainer>
+        <Inner>
+          <LoadingMessage>여행지를 불러오는 중...</LoadingMessage>
+        </Inner>
+      </PageContainer>
+    )
+  }
 
   return (
     <PageContainer>
@@ -114,20 +226,36 @@ export default function PopularTripsPage() {
             <Image src="/icons/Larrow.png" alt="뒤로" width={20} height={20} />
           </BackButton>
           <SearchBox>
-            <SearchIcon src="/icons/Search_light.png" alt="검색" width={18} height={18} />
+            <SearchIcon 
+              src="/icons/Search_light.png" 
+              alt="검색" 
+              width={18} 
+              height={18}
+              onClick={handleSearch}
+              style={{ cursor: 'pointer' }}
+            />
             <SearchInput
               placeholder="어디로 떠나시나요?"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  // 엔터 키를 누르면 즉시 검색 실행
+                  handleSearch()
+                }
+              }}
             />
           </SearchBox>
         </HeaderRow>
 
         <PopularRow>
-          {POPULAR_SPOTS.map((spot) => (
-            <PopularItem key={spot.id}>
+          {popularSpots.map((spot) => (
+            <PopularItem 
+              key={spot.id}
+              onClick={() => onSelectCity(spot)}
+            >
               <PopularThumb>
-                <Image src="/icons/blank.png" alt={spot.name} fill sizes="64px" />
+                <Image src={spot.image || '/icons/blank.png'} alt={spot.name} fill sizes="64px" />
               </PopularThumb>
               <PopularName>{spot.name}</PopularName>
             </PopularItem>
@@ -136,47 +264,78 @@ export default function PopularTripsPage() {
 
         <Tabs>
           {TAB_OPTIONS.map((tab) => (
-            <TabButton key={tab} $active={activeTab === tab} onClick={() => setActiveTab(tab)}>
+            <TabButton 
+              key={tab} 
+              $active={activeTab === tab} 
+              onClick={() => {
+                setActiveTab(tab)
+                setSelectedCountryId(null) // 탭 변경 시 선택된 국가 초기화
+                setQuery('') // 검색어도 초기화
+                setSearchQuery('') // 검색 쿼리도 초기화
+              }}
+            >
               {tab}
             </TabButton>
           ))}
         </Tabs>
 
         <CategoryChips>
-          <Chip $active={!query} onClick={() => setQuery('')}>전체</Chip>
-          <Chip $active={query === '일본'} onClick={() => setQuery('일본')}>일본</Chip>
-          <Chip $active={query === '동남아시아'} onClick={() => setQuery('동남아시아')}>동남아시아</Chip>
-          <Chip $active={query === '유럽'} onClick={() => setQuery('유럽')}>유럽</Chip>
-          <Chip $active={query === '국내'} onClick={() => setQuery('국내')}>국내</Chip>
+          <Chip 
+            $active={selectedCountryId === null && !searchQuery} 
+            onClick={() => {
+              setQuery('')
+              setSearchQuery('')
+              setSelectedCountryId(null)
+            }}
+          >
+            전체
+          </Chip>
+          {filteredCountries?.map((country) => (
+            <Chip 
+              key={country.countryId} 
+              $active={selectedCountryId === country.countryId} 
+              onClick={() => {
+                setQuery('')
+                setSearchQuery('')
+                setSelectedCountryId(country.countryId)
+              }}
+            >
+              {country.koreanName}
+            </Chip>
+          ))}
         </CategoryChips>
 
         <Sections>
-          {sections.map((sec) => (
-            <Section key={sec.id}>
-              <SectionTitle>{sec.country}</SectionTitle>
-              <CityList>
-                {sec.cities.map((city) => (
-                  <CityRow key={city.id}>
-                    <CityMeta>
-                      <CityThumb>
-                        <Image src="/icons/blank.png" alt={city.name} fill sizes="48px" />
-                      </CityThumb>
-                      <CityText>
-                        <CityName>{city.name}</CityName>
-                        {city.subtitle && <CitySub>{city.subtitle}</CitySub>}
-                      </CityText>
-                    </CityMeta>
-                    <SelectButton
-                      onClick={() => onSelectCity(city)}
-                      $active={selectedCityIds.includes(city.id)}
-                    >
-                      선택
-                    </SelectButton>
-                  </CityRow>
-                ))}
-              </CityList>
-            </Section>
-          ))}
+          {!isLoading && sections.length > 0 ? (
+            sections.map((sec) => (
+              <Section key={sec.id}>
+                <SectionTitle>{sec.country}</SectionTitle>
+                <CityList>
+                  {sec.cities.map((city) => (
+                    <CityRow key={city.id}>
+                      <CityMeta>
+                        <CityThumb>
+                          <Image src={city.image || '/icons/blank.png'} alt={city.name} fill sizes="48px" />
+                        </CityThumb>
+                        <CityText>
+                          <CityName>{city.name}</CityName>
+                          {city.subtitle && <CitySub>{city.subtitle}</CitySub>}
+                        </CityText>
+                      </CityMeta>
+                      <SelectButton
+                        onClick={() => onSelectCity(city)}
+                        $active={selectedCityIds.includes(city.id)}
+                      >
+                        선택
+                      </SelectButton>
+                    </CityRow>
+                  ))}
+                </CityList>
+              </Section>
+            ))
+          ) : !isLoading ? (
+            <EmptyMessage>검색 결과가 없습니다.</EmptyMessage>
+          ) : null}
         </Sections>
 
         {selectedCityIds.length > 0 && (
@@ -191,7 +350,24 @@ export default function PopularTripsPage() {
               ))}
               <EditButton onClick={clearSelected}>편집</EditButton>
             </SelectedPlacesList>
-            <AddButton onClick={() => router.push('/schedule')}>선택 완료</AddButton>
+            <AddButton 
+              onClick={() => {
+                // 선택한 도시 정보를 localStorage에 저장하거나 쿼리 파라미터로 전달
+                const selectedCityData = selectedCities.map(city => ({
+                  cityId: city.cityId,
+                  countryId: city.countryId,
+                  name: city.name,
+                }))
+                
+                // schedule 페이지로 이동 (나중에 연동 시 사용)
+                if (typeof window !== 'undefined') {
+                  sessionStorage.setItem('selectedCities', JSON.stringify(selectedCityData))
+                }
+                router.push('/schedule')
+              }}
+            >
+              선택 완료
+            </AddButton>
           </BottomActionSection>
         )}
       </Inner>
@@ -266,6 +442,16 @@ const PopularItem = styled.div`
   flex-direction: column;
   align-items: center;
   min-width: 64px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  
+  &:hover {
+    opacity: 0.7;
+  }
+  
+  &:active {
+    opacity: 0.5;
+  }
 `
 
 const PopularThumb = styled.div`
@@ -491,6 +677,20 @@ const EditButton = styled.div`
   border: 1px solid #e9ecef;
   cursor: pointer;
   transition: all 0.2s ease;
+`
+
+const LoadingMessage = styled.p`
+  text-align: center;
+  color: #777777;
+  margin-top: 4rem;
+  font-size: 0.875rem;
+`
+
+const EmptyMessage = styled.p`
+  text-align: center;
+  color: #777777;
+  padding: 3rem 0;
+  font-size: 0.875rem;
 `
 
 
