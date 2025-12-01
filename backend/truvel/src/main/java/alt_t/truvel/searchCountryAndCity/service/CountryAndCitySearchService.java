@@ -8,10 +8,21 @@ import alt_t.truvel.searchCountryAndCity.dto.CitySearchResponse;
 import alt_t.truvel.searchCountryAndCity.domain.entity.City;
 import alt_t.truvel.searchCountryAndCity.domain.entity.Country;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -21,17 +32,21 @@ public class CountryAndCitySearchService {
 
     private final CityRepository cityRepository;
     private final CountryRepository countryRepository;
+    private final RedisTemplate<String, Long> popularityRedisTemplate;
+    private final PopularityService popularityService;
 
+    static final String COUNTRY_RANK_KEY = "ranking:country";
+    static final String CITY_RANK_KEY = "ranking:city";
 
     /**
      * 국가를 검색하는 메서드
      * @param keyword : 사용자가 입력한 국가 이름
      * @return :
      */
-    public List<CountrySearchResponse> searchCountries(String keyword)  {
+    public List<CountrySearchResponse> searchCountries(String keyword) {
         List<Country> countries;
 
-        // 키워드가 없으면 인기도가 높은 10개 국가 반환
+        // 키워드가 없으면 인기도가 높은 30개 국가 반환
         if (keyword == null || keyword.trim().isEmpty()) {
             countries = countryRepository.findAll();
 
@@ -43,25 +58,15 @@ public class CountryAndCitySearchService {
             if (countries.isEmpty()) {
                 countries = countryRepository.findByEnglishContainingIgnoreCase(keyword);
             }
+            return countries.stream()
+                    .peek(country ->
+                            popularityService.incrementPopularity(country.getId(), COUNTRY_RANK_KEY))
+                    .map(CountrySearchResponse::new)
+                    .toList();
         }
         // 검색된 모든 요소들을 리스트 형태로 반환
-        return countries.stream().peek(Country::incrementPopularity)
+        return countries.stream()
                 .map(CountrySearchResponse::new)
-                .toList();
-    }
-
-    /**
-     * 인기도가 높은 상위 10개 도시를 반환하는 메서드
-     * @return : 인기도가 높은 10개 도시 리스트
-     */
-    public List<CitySearchResponse> getTop10CitiesByPopularity() {
-        return cityRepository.findAll().stream()
-                .sorted((c1, c2) -> Long.compare(c2.getPopularity(), c1.getPopularity()))
-                .limit(10)
-                .map(city -> {
-                    city.incrementPopularity(); // 인기도 증가
-                    return CitySearchResponse.from(city);
-                })
                 .toList();
     }
 
@@ -78,27 +83,81 @@ public class CountryAndCitySearchService {
         // countryId가 null이 아닐때 검색 로직 수행
         if (countryId != null) {
             // 특정 국가 내에서 도시 검색 (CountryId를 통해 조회)
+            // 키워드가 없는 경우
             if (keyword == null || keyword.trim().isEmpty()) {
                 cities = cityRepository.findByCountryId(countryId); // countryId로만 도시들을 가져옴
-            } else { // 한국명으로 도시를 검색
+            }
+            else { // 한국명으로 도시를 검색
                 cities = cityRepository.findByCountryIdAndKoreanContainingIgnoreCase(countryId, keyword);
                 if (cities.isEmpty()) { // 만일 cities가 비어있으면 영어명으로 도시 검색을 재시도
                     cities = cityRepository.findByCountryIdAndEnglishContainingIgnoreCase(countryId, keyword);
                 }
+                return cities.stream()
+                        .peek(city ->
+                                popularityService.incrementPopularity(city.getId(), CITY_RANK_KEY))
+                        .map(CitySearchResponse::from)
+                        .toList();
             }
-        } else {
-            // countryId가 없는 경우: 모든 도시에서 키워드 검색
+        }
+        // countryId가 없는 경우: 모든 도시에서 키워드 검색
+        else {
+            // 키워드가 없는 경우
             if (keyword == null || keyword.trim().isEmpty()) {
                 cities = cityRepository.findAll(); // 모든 도시
-            } else {
+            }
+            else {
                 cities = cityRepository.findByKoreanContainingIgnoreCase(keyword);
                 if (cities.isEmpty()) {
                     cities = cityRepository.findByEnglishContainingIgnoreCase(keyword);
                 }
+                return cities.stream()
+                        .peek(city ->
+                                popularityService.incrementPopularity(city.getId(), CITY_RANK_KEY))
+                        .map(CitySearchResponse::from)
+                        .toList();
             }
         }
-        return cities.stream().peek(City::incrementPopularity)
+        return cities.stream()
                 .map(CitySearchResponse::from)
                 .toList();
     }
+
+    /**
+     * 인기도가 높은 상위 30개 도시를 반환하는 메서드
+     * @return : 인기도가 높은 30개 도시 리스트
+     */
+    @Cacheable(value = "top30Cities", key = "'top30Cities'")
+    public List<City> getTop30CitiesByPopularity() {
+        // Redis에서 상위 30개 cityId 조회
+        Set<ZSetOperations.TypedTuple<Long>> top30Cities =
+                popularityRedisTemplate.opsForZSet().reverseRangeWithScores(CITY_RANK_KEY, 0, 29);
+
+        if (top30Cities == null || top30Cities.isEmpty()) {
+            // 캐시 hit 실패 시 DB fallback
+            return cityRepository.findAll(
+                    PageRequest.of(
+                            0,
+                            30,
+                            Sort.by(Sort.Direction.DESC, "popularity")
+                    )).getContent();
+        }
+        // cityId를 Long으로 변환
+        List<Long> cityIds = top30Cities.stream()
+                .map(ZSetOperations.TypedTuple::getValue)
+                .toList();
+
+        // DB에서 City 엔티티 조회
+        List<City> cities = cityRepository.findAllById(cityIds);
+
+        // Redis를 거치지 않으면 실시간 성을 보장할 수 없다.
+        // Redis 순서대로 정렬 (ZSet 순서 보장)
+        Map<Long, City> cityMap = cities.stream()
+                .collect(Collectors.toMap(City::getId, Function.identity()));
+
+        return cityIds.stream()
+                .map(cityMap::get)
+                .filter(Objects::nonNull)
+                .toList();
+    }
+
 }

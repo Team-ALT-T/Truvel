@@ -30,7 +30,7 @@ public class Country {
         this.english = english;
     }
 
-    public void incrementPopularity() {
-        this.popularity += 1L;
+    public void incrementPopularity(Long count) {
+        this.popularity += count;
     }
 }

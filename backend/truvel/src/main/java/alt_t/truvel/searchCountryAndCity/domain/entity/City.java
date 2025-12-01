@@ -47,8 +47,8 @@ public class City {
     /**
      * 도시의 인기도를 1 증가시키는 메서드
      */
-    public void incrementPopularity() {
-        this.country.incrementPopularity(); // 국가의 인기도도 함께 증가
-        this.popularity += 1;
+    public void incrementPopularity(Long count) {
+        this.country.incrementPopularity(count); // 국가의 인기도도 함께 증가
+        this.popularity += count;
     }
 }
