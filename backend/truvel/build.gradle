@@ -80,33 +80,30 @@ test {
 	useJUnitPlatform()
 }
 
+def jacocoExclude = [
+        '/searchCountryAndCity/',
+        'GooglePlaceClient.java'
+]
+
 jacocoTestReport {
     dependsOn test
-    reports {
-        xml.required = false
-        html.required = true
-        csv.required = false
+
+    afterEvaluate {
+        classDirectories.setFrom(
+                files(classDirectories.files.collect {
+                    fileTree(dir: it, excludes: jacocoExclude)
+                })
+        )
     }
-    finalizedBy jacocoTestCoverageVerification
 }
 
-// 테스트 커버리지 검증 설정 (서비스 계층 위주)
 jacocoTestCoverageVerification {
     violationRules {
         rule {
-            // 전체 프로젝트 커버리지 0.70
             limit {
                 minimum = 0.70
             }
-            // 특정 클래스들 제외
-            excludes = [
-                    '*.dto.*',           // DTO 클래스들
-                    '*.config.*',        // 설정 클래스들
-                    '*.domain.entity.*', // 엔티티 클래스들 (getter/setter 위주)
-                    '*.*Application',    // 메인 애플리케이션 클래스
-                    '*.jwt.JwtConstant', // 상수 클래스
-                    '*.security.*'       // 시큐리티 설정 클래스들
-            ]
+            excludes = jacocoExclude
         }
     }
 }

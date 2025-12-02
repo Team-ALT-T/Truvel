@@ -1,7 +1,6 @@
-package alt_t.truvel.travelPlan.location;
+package alt_t.truvel.location.controller;
 
 import alt_t.truvel.auth.JwtAuthenticationFilter;
-import alt_t.truvel.location.controller.LocationController;
 import alt_t.truvel.location.locationDto.request.LocationSaveRequestDto;
 import alt_t.truvel.location.locationDto.response.GooglePlaceResultDto;
 import alt_t.truvel.location.locationDto.response.LocationResponseDto;

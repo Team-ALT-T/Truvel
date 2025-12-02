@@ -33,6 +33,7 @@ public class Country {
     public Country(String korean, String english) {
         this.korean = korean;
         this.english = english;
+        this.popularity = 0L;
     }
 
     public void incrementPopularity() {

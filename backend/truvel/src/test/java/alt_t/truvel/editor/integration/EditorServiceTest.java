@@ -1,4 +1,4 @@
-package alt_t.truvel.editor.intergration;
+package alt_t.truvel.editor.integration;
 
 import alt_t.truvel.auth.user.domain.entity.User;
 import alt_t.truvel.auth.user.domain.repository.UserRepository;
@@ -34,7 +34,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-class EditorServiceIntegrationTest {
+class EditorServiceTest {
 
     @Autowired private EditorService editorService;
     @Autowired private EditorRepository editorRepository;

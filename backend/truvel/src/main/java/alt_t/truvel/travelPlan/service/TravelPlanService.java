@@ -23,7 +23,6 @@ public class TravelPlanService {
 
     private final TravelPlanRepository travelPlanRepository;
     private final UserRepository userRepository;
-    private final CountryRepository countryRepository;
     private final CityRepository cityRepository;
 
 
@@ -34,7 +33,7 @@ public class TravelPlanService {
      * @return : 응답 성공 메시지와 DB에 저장된 여행 일정의 아이디 반환
      */
     @Transactional
-    public TravelPlan createTravelPlan(Long userId, TravelPlanRequest request) {
+    public TravelPlanResponse createTravelPlan(Long userId, TravelPlanRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
         City requestCity = cityRepository.findById(request.getCityId())
@@ -55,8 +54,7 @@ public class TravelPlanService {
                 .build();
 
         user.addTravelPlan(travelPlan);
-
-        return travelPlanRepository.save(travelPlan);
+        return new TravelPlanResponse("여행 생성 성공!", travelPlanRepository.save(travelPlan));
     }
 
 

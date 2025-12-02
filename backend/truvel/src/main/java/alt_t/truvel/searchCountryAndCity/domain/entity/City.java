@@ -47,6 +47,7 @@ public class City {
         this.korean = korean;
         this.english = english;
         this.country = country;
+        this.popularity = 0L;
     }
 
     /**

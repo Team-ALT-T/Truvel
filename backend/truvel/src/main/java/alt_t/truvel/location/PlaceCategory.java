@@ -8,7 +8,8 @@ import java.time.Duration;
 public enum PlaceCategory {
     DEFAULT(Duration.ofHours(1L)),
     CAFE(Duration.ofHours(2L)),
-    RESTAURANT(Duration.ofHours(2L));
+    RESTAURANT(Duration.ofHours(2L)),
+    ATTRACTION(Duration.ofHours(3L));
 
     PlaceCategory(Duration stayTime){
         this.stayTime = stayTime;
