@@ -1,4 +1,4 @@
-package alt_t.truvel.routeOptimization.service;
+package alt_t.truvel.daySchedule.service;
 
 import alt_t.truvel.exception.RouteOptException;
 import alt_t.truvel.location.domain.entity.Location;

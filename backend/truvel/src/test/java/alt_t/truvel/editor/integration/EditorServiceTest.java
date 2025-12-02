@@ -1,4 +1,4 @@
-package alt_t.truvel.editor.intergration;
+package alt_t.truvel.editor.integration;
 
 import alt_t.truvel.auth.user.domain.entity.User;
 import alt_t.truvel.auth.user.domain.repository.UserRepository;
@@ -28,12 +28,13 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+
 /**
  * EditorService의 통합 테스트 - 관련 구현체를 모두 주입받아 진행
  */
 @SpringBootTest
 @ActiveProfiles("test")
-class EditorServiceIntegrationTest {
+class EditorServiceTest {
 
     @Autowired private EditorService editorService;
     @Autowired private EditorRepository editorRepository;

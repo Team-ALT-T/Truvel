@@ -32,20 +32,20 @@ public class RedisConfig {
         return new LettuceConnectionFactory(host, port);
     }
 
-//    @Bean
-//    public RedisTemplate<String, String> redisTemplate() {
-//        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
-//        redisTemplate.setConnectionFactory(redisConnectionFactory());
-//
-//        // Key와 Value 직렬화 설정
-//        // StringRedisSerializer를 사용하면 Key와 Value가 String 형태로 저장됩니다.
-//        redisTemplate.setKeySerializer(new StringRedisSerializer());
-//        redisTemplate.setValueSerializer(new StringRedisSerializer());
-//
-//        // (선택사항) Hash 사용하는 경우 Hash Key/Value 직렬화
-//        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
-//        redisTemplate.setHashValueSerializer(new StringRedisSerializer());
-//
-//        return redisTemplate;
-//    }
+    @Bean
+    public RedisTemplate<String, String> redisTemplate() {
+        RedisTemplate<String, String> redisTemplate = new RedisTemplate<>();
+        redisTemplate.setConnectionFactory(redisConnectionFactory());
+
+        // Key와 Value 직렬화 설정
+        // StringRedisSerializer를 사용하면 Key와 Value가 String 형태로 저장됩니다.
+        redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setValueSerializer(new StringRedisSerializer());
+
+        // (선택사항) Hash 사용하는 경우 Hash Key/Value 직렬화
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+        redisTemplate.setHashValueSerializer(new StringRedisSerializer());
+
+        return redisTemplate;
+    }
 }

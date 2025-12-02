@@ -15,5 +15,6 @@ public class LocationSaveRequestDto {
     private Double latitude;
     private Double longitude;
     private String address;
+    @Builder.Default
     private PlaceCategory category = PlaceCategory.DEFAULT;
 }

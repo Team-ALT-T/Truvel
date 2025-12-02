@@ -1,13 +1,11 @@
 package alt_t.truvel.daySchedule.service;
 
 import alt_t.truvel.location.domain.entity.Location;
-import alt_t.truvel.location.domain.repository.LocationRepository;
 import alt_t.truvel.daySchedule.dayScheduleDTO.requset.DayScheduleRequest;
 import alt_t.truvel.daySchedule.dayScheduleDTO.response.DayScheduleResponse;
 import alt_t.truvel.daySchedule.domain.entity.DaySchedule;
 import alt_t.truvel.daySchedule.domain.repository.DayScheduleRepository;
 import alt_t.truvel.location.service.LocationService;
-import alt_t.truvel.routeOptimization.service.RouteOptimization;
 import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import alt_t.truvel.travelPlan.domain.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;

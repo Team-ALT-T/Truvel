@@ -34,23 +34,23 @@ public class User {
     @Column
     private String profileImg;
 
-    @Column(nullable = false)
+    @Column
     @Builder.Default
     private Boolean locationConsent = false;
 
 //    @Column(nullable = true)
 //    private boolean over14; // 만 14세 이상인가?
 
-    @Column(nullable = true)
+    @Column
     @Builder.Default
     private Boolean agreeTerms = false; // 서비스 이용약관 동의
 
-    @Column(nullable = true)
+    @Column
     @Builder.Default
     private Boolean agreePrivacy = false; // 개인정보 수집 및 이용 동의
 
 
-    @Column(nullable = false)
+    @Column
     @Builder.Default
     private Boolean agreeThirdParty = false; // 제3자 개인정보 제공 동의
 
@@ -71,26 +71,14 @@ public class User {
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Editor> editors = new ArrayList<>();
 
-    public void setTravelPlan(TravelPlan travelPlan) {
-    }
-
     public void addTravelPlan(TravelPlan travelPlan) {
         this.travelPlans.add(travelPlan);
         travelPlan.setUser(this);
     }
 
-    public void addEmailVerification(EmailVerification emailVerification) {
-        this.emailVerifications.add(emailVerification);
-        emailVerification.setUser(this);
-    }
 
     public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
-    }
-
-    public void addEditor(Editor editor) {
-        this.editors.add(editor);
-        editor.setUser(this);
     }
 
 

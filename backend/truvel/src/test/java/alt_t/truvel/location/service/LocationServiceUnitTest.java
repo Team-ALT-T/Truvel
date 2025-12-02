@@ -1,4 +1,4 @@
-package alt_t.truvel.travelPlan.location;
+package alt_t.truvel.location.service;
 
 import alt_t.truvel.location.domain.entity.Location;
 import alt_t.truvel.location.domain.repository.LocationRepository;
@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class LocationServiceTest {
+class LocationServiceUnitTest {
 
     @Mock
     private GooglePlaceClient googlePlaceClient;

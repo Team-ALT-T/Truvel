@@ -5,12 +5,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Column;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor; // 기본 생성자를 위해 추가
 
 @Entity
 @Getter
 @NoArgsConstructor
+@Builder
+@AllArgsConstructor
 public class Country {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,11 +27,13 @@ public class Country {
     private String english;
 
     @Column(nullable = false)
+    @Builder.Default
     private Long popularity = 0L;
 
     public Country(String korean, String english) {
         this.korean = korean;
         this.english = english;
+        this.popularity = 0L;
     }
 
     public void incrementPopularity() {

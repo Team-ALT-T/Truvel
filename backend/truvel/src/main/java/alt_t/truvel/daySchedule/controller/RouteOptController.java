@@ -1,4 +1,4 @@
-package alt_t.truvel.routeOptimization.controller;
+package alt_t.truvel.daySchedule.controller;
 
 import alt_t.truvel.daySchedule.dayScheduleDTO.requset.DayScheduleRequest;
 import alt_t.truvel.daySchedule.dayScheduleDTO.response.DayScheduleResponse;
