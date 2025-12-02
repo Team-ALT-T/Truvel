@@ -29,8 +29,6 @@ public class ScheduleService {
             Location location = locationRepository.findByName(scheduleRequest.getLocationName())
                     .orElseThrow(() -> new NoSuchElementException(scheduleRequest.getLocationName() + "를 찾을 수 없습니다."));
 
-            log.debug("Checking existence for DaySchedule ID: {} and Location: {}", daySchedule.getDay_schedule_id(), location.getName());
-
             schedules.add(Schedule.of(daySchedule, scheduleRequest, location));
         });
 

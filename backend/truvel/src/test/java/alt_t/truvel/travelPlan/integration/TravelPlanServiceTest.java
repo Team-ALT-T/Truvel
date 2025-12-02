@@ -1,4 +1,4 @@
-package alt_t.truvel.travelPlan;
+package alt_t.truvel.travelPlan.integration;
 
 import alt_t.truvel.searchCountryAndCity.domain.entity.City;
 import alt_t.truvel.searchCountryAndCity.domain.repository.CityRepository;
@@ -95,14 +95,14 @@ class TravelPlanServiceTest {
                 LocalDate.of(2025, 1, 1),
                 LocalDate.of(2025, 1, 2)
         );
-        response1 = new TravelPlanResponse(travelPlanService.createTravelPlan(daiseek.getId(), request1));
+        response1 = travelPlanService.createTravelPlan(daiseek.getId(), request1);
 
         request2 = new TravelPlanRequest(
                 osaka.getId(),      // cityId
                 LocalDate.of(2025, 2, 1),
                 LocalDate.of(2025, 2, 2)
         );
-        response2 = new TravelPlanResponse(travelPlanService.createTravelPlan(daiseek.getId(), request2));
+        response2 = travelPlanService.createTravelPlan(daiseek.getId(), request2);
     }
 
 
@@ -131,7 +131,7 @@ class TravelPlanServiceTest {
                 LocalDate.of(2025, 3, 5));
 
         // when
-        TravelPlanResponse response = new TravelPlanResponse("여행 일정이 생성되었습니다", travelPlanService.createTravelPlan(daiseek.getId(), request));
+        TravelPlanResponse response = travelPlanService.createTravelPlan(daiseek.getId(), request);
 
         // then
         // 생성된 여행 일정이 DB에 존재하는지 확인
@@ -145,7 +145,7 @@ class TravelPlanServiceTest {
         assertThat(savedTravelPlan.getUser().getId()).isEqualTo(daiseek.getId());
 
         // TravelPlanResponse의 내용도 확인
-        assertThat(response.getMessage()).isEqualTo("여행 일정이 생성되었습니다");
+        assertThat(response.getMessage()).isEqualTo("여행 생성 성공!");
         assertThat(response.getTravelPlanId()).isEqualTo(savedTravelPlan.getId());
     }
 

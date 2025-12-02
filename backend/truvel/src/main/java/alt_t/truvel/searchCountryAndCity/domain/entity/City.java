@@ -7,6 +7,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Column;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -14,6 +16,8 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor
+@Builder
+@AllArgsConstructor
 public class City {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -30,6 +34,7 @@ public class City {
     private Country country;
 
     @Column(nullable = false)
+    @Builder.Default
     private Long popularity = 0L;
 
     /**
@@ -42,6 +47,7 @@ public class City {
         this.korean = korean;
         this.english = english;
         this.country = country;
+        this.popularity = 0L;
     }
 
     /**

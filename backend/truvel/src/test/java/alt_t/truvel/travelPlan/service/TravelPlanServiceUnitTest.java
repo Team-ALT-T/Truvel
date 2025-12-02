@@ -1,4 +1,4 @@
-package alt_t.truvel.travelPlan;
+package alt_t.truvel.travelPlan.service;
 
 import alt_t.truvel.auth.user.domain.entity.User;
 import alt_t.truvel.auth.user.domain.repository.UserRepository;
@@ -10,7 +10,6 @@ import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import alt_t.truvel.travelPlan.domain.repository.TravelPlanRepository;
 import alt_t.truvel.travelPlan.dto.TravelPlanRequest;
 import alt_t.truvel.travelPlan.dto.TravelPlanResponse;
-import alt_t.truvel.travelPlan.service.TravelPlanService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -101,10 +100,10 @@ class TravelPlanServiceUnitTest {
         given(travelPlanRepository.save(any(TravelPlan.class))).willReturn(mockTravelPlan);
 
         // when
-        TravelPlanResponse response = new TravelPlanResponse("여행 일정이 생성되었습니다." ,travelPlanService.createTravelPlan(userId, mockRequest));
+        TravelPlanResponse response = travelPlanService.createTravelPlan(userId, mockRequest);
 
         // then
-        assertThat(response.getMessage()).isEqualTo("여행 일정이 생성되었습니다.");
+        assertThat(response.getMessage()).isEqualTo("여행 생성 성공!");
         assertThat(response.getTravelPlanId()).isEqualTo(1L);
 
         verify(userRepository).findById(userId);
