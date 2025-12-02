@@ -22,6 +22,7 @@ public class EmailVerification {
     private String code;            // 인증 코드 (예: 6자리 숫자)
 
     private LocalDateTime expiresAt;  // 만료 시각 - 기본 10분
+    @Builder.Default
     private boolean used = false;     // 재사용 방지
 
     @ManyToOne(fetch = FetchType.LAZY)
