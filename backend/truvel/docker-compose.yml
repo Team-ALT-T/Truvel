@@ -39,9 +39,12 @@ services:
   redis:
     container_name: redis
     image: "redis:7" # redis 버전 명시
+    volumes:
+      - redis-data
     ports:
         - "${REDIS_PORT}:6379"
     command: ["redis-server", "--bind", "0.0.0.0", "--port", "6379"]
 
 volumes:
+  redis-data:
   mysql-data:
