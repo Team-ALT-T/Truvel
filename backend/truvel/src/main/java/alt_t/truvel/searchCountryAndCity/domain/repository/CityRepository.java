@@ -18,4 +18,10 @@ public interface CityRepository extends JpaRepository<City, Long> {
     List<City> findByCountryIdAndEnglishContainingIgnoreCase(Long countryId, String keyword);
 
     // 특정 CountryId에 속하는 모든 도시 조회
-    List<City> findByCountryId(Long countryId);}
+    List<City> findByCountryId(Long countryId);
+
+    // 인기도 순으로 도시 100개 조회
+    List<City> findTop100ByOrderByPopularityDesc();
+}
+
+

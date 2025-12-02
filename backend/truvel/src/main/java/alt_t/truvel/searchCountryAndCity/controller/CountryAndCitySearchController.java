@@ -48,5 +48,16 @@ public class CountryAndCitySearchController {
         List<CitySearchResponse> cities = countryAndCitySearchService.searchCities(countryId, keyword);
         return ResponseEntity.ok(cities);
     }
+    /**
+     * 인기도가 높은 상위 10개 도시를 반환하는 메서드
+     * @return : 인기도가 높은 10개 도시 리스트
+     */
+    @Operation(summary = "인기 도시 조회", description = "인기도가 높은 상위 30개 도시를 반환합니다.")
+    @GetMapping("/top-cities")
+    public ResponseEntity<List<CitySearchResponse>> getTop10CitiesByPopularity() {
+        List<CitySearchResponse> topCities = countryAndCitySearchService.getTop30CitiesByPopularity();
+        return ResponseEntity.ok(topCities);
+    }
+
 }
 

@@ -1,4 +1,10 @@
 spring:
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 15 # 테스트용
+
   datasource:
     # h2 데이터베이스를 인메모리 형식으로 적용
     url: jdbc:h2:mem:truvel-testDB;DB_CLOSE_DELAY=-1;MODE=MySQL

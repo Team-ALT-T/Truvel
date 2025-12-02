@@ -2,24 +2,28 @@ package alt_t.truvel.searchCountryAndCity.dto;
 
 import alt_t.truvel.searchCountryAndCity.domain.entity.City;
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.io.Serializable;
+import java.util.List;
 
 @Getter
 @NoArgsConstructor
 @Builder
-public class CitySearchResponse {
+public class CitySearchResponse implements Serializable {
     private Long cityId;
     private Long countryId;
-    private String koreanName;
-    private String englishName;
+    private String korean;
+    private String english;
 
 
-    public CitySearchResponse(Long cityId, Long countryId, String koreanName, String englishName) {
+    public CitySearchResponse(Long cityId, Long countryId, String korean, String english) {
         this.cityId = cityId;
         this.countryId = countryId;
-        this.koreanName = koreanName;
-        this.englishName = englishName;
+        this.korean = korean;
+        this.english = english;
     }
 
 
@@ -32,8 +36,8 @@ public class CitySearchResponse {
         return CitySearchResponse.builder()
                 .cityId(city.getId())
                 .countryId(city.getCountry().getId())
-                .koreanName(city.getKorean())
-                .englishName(city.getEnglish())
+                .korean(city.getKorean())
+                .english(city.getEnglish())
                 .build();
     }
 }

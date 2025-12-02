@@ -48,7 +48,7 @@ public class CountryAndCitySearchService {
 
         // 키워드가 없으면 인기도가 높은 30개 국가 반환
         if (keyword == null || keyword.trim().isEmpty()) {
-            countries = countryRepository.findAll();
+            countries = countryRepository.findTop100ByOrderByPopularityDesc();
 
             // 키워드가 있으면 검색 로직
         } else {
@@ -103,7 +103,7 @@ public class CountryAndCitySearchService {
         else {
             // 키워드가 없는 경우
             if (keyword == null || keyword.trim().isEmpty()) {
-                cities = cityRepository.findAll(); // 모든 도시
+                cities = cityRepository.findTop100ByOrderByPopularityDesc(); // 모든 도시
             }
             else {
                 cities = cityRepository.findByKoreanContainingIgnoreCase(keyword);
@@ -127,24 +127,23 @@ public class CountryAndCitySearchService {
      * @return : 인기도가 높은 30개 도시 리스트
      */
     @Cacheable(value = "top30Cities", key = "'top30Cities'")
-    public List<City> getTop30CitiesByPopularity() {
+    public List<CitySearchResponse> getTop30CitiesByPopularity() {
         // Redis에서 상위 30개 cityId 조회
         Set<ZSetOperations.TypedTuple<Long>> top30Cities =
                 popularityRedisTemplate.opsForZSet().reverseRangeWithScores(CITY_RANK_KEY, 0, 29);
 
         if (top30Cities == null || top30Cities.isEmpty()) {
-            // 캐시 hit 실패 시 DB fallback
+            // Redis가 비어있으면
             return cityRepository.findAll(
                     PageRequest.of(
                             0,
                             30,
                             Sort.by(Sort.Direction.DESC, "popularity")
-                    )).getContent();
+                    )).getContent().stream()
+                    .map(CitySearchResponse::from).toList();
         }
         // cityId를 Long으로 변환
-        List<Long> cityIds = top30Cities.stream()
-                .map(ZSetOperations.TypedTuple::getValue)
-                .toList();
+        List<Long> cityIds = sortedSetToIdList(top30Cities);
 
         // DB에서 City 엔티티 조회
         List<City> cities = cityRepository.findAllById(cityIds);
@@ -157,7 +156,13 @@ public class CountryAndCitySearchService {
         return cityIds.stream()
                 .map(cityMap::get)
                 .filter(Objects::nonNull)
+                .map(CitySearchResponse::from)
                 .toList();
     }
 
+    public static List<Long> sortedSetToIdList(Set<ZSetOperations.TypedTuple<Long>> cities){
+        return cities.stream()
+                .map(ZSetOperations.TypedTuple::getValue)
+                .toList();
+    }
 }
