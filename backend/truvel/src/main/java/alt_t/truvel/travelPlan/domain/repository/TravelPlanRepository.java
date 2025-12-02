@@ -3,6 +3,7 @@ package alt_t.truvel.travelPlan.domain.repository;
 import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
@@ -13,4 +14,6 @@ public interface TravelPlanRepository extends JpaRepository<TravelPlan, Long> {
      * @return : 조회된 여행 일정들을 리스트로 묶어서 반환
      */
     List<TravelPlan> findByUserId(Long userId);
+
+    void deleteByModifiedAtBefore(LocalDateTime dateTime);
 }
