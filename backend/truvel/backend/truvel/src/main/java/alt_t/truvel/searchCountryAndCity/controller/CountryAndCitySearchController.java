@@ -1,0 +1,63 @@
+package alt_t.truvel.searchCountryAndCity.controller;
+
+import alt_t.truvel.searchCountryAndCity.dto.CitySearchResponse;
+import alt_t.truvel.searchCountryAndCity.service.CountryAndCitySearchService;
+import alt_t.truvel.searchCountryAndCity.dto.CountrySearchResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController("search")
+@RequiredArgsConstructor
+@Tag(name = "국가 및 도시 검색 API", description = "국가 및 도시 검색 관련 API (일주일 단위 인기 순으로 30개까지 조회합니다")
+public class CountryAndCitySearchController {
+
+    private final CountryAndCitySearchService countryAndCitySearchService; // 서비스 주입
+
+
+    /**
+     * 국가를 검색하는 메서드
+     * @param keyword : 사용자가 입력한 국가 이름
+     * @return : 검색된 국가들을 리스트 형태로 반환
+     */
+    @Operation(summary = "국가 검색", description = "키워드로 국가를 검색합니다. 키워드가 없으면 모든 국가를 반환합니다. (limit 30)")
+    @GetMapping("/countries")
+    public ResponseEntity<List<CountrySearchResponse>> searchCountries(@RequestParam(required = false) String keyword) {
+        List<CountrySearchResponse> countries = countryAndCitySearchService.searchCountries(keyword);
+        return ResponseEntity.ok(countries);
+    }
+
+
+    /**
+     *
+     * @param countryId : 이전 단계에서 국가 검색 후 응답으로 나온 국가 아이디
+     * @param keyword : 사용자가 입력한 도시 이름
+     * @return : 검색된 도시를 리스트 형태로 반환
+     */
+    @Operation(summary = "도시 검색", description = "국가 ID와 키워드로 도시를 검색합니다. 국가 ID가 없으면 모든 국가에서 검색합니다. (limit 30)")
+    @GetMapping("/cities")
+    public ResponseEntity<List<CitySearchResponse>> searchCities(
+            @RequestParam(required = false) Long countryId,
+            @RequestParam(required = false) String keyword) {
+        List<CitySearchResponse> cities = countryAndCitySearchService.searchCities(countryId, keyword);
+        return ResponseEntity.ok(cities);
+    }
+    /**
+     * 인기도가 높은 상위 10개 도시를 반환하는 메서드
+     * @return : 인기도가 높은 10개 도시 리스트
+     */
+    @Operation(summary = "인기 도시 조회", description = "인기도가 높은 상위 30개 도시를 반환합니다.")
+    @GetMapping("/top-cities")
+    public ResponseEntity<List<CitySearchResponse>> getTop10CitiesByPopularity() {
+        List<CitySearchResponse> topCities = countryAndCitySearchService.getTop30CitiesByPopularity();
+        return ResponseEntity.ok(topCities);
+    }
+
+}
+

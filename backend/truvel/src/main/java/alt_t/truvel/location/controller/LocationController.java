@@ -28,6 +28,13 @@ public class LocationController {
 
         return ResponseEntity.ok(results);
     }
+    // 장소 목록
+    @GetMapping("/getLocations/{travelPlan_id}")
+    @Operation(summary = "장소 목록", description = "저장된 장소 목록을 조회합니다.")
+    public ResponseEntity<List<LocationResponseDto>> getAllLocations(@PathVariable Long travelPlan_id) {
+        List<LocationResponseDto> locations = locationService.getAll(travelPlan_id);
+        return ResponseEntity.ok(locations);
+    }
 
     //장소 저장
     @PostMapping
@@ -35,6 +42,13 @@ public class LocationController {
     public ResponseEntity<List<LocationResponseDto>> saveMultipleLocations(@RequestBody List<LocationSaveRequestDto> dtos) {
         List<LocationResponseDto> responseDtos = locationService.saveSelectedPlaces(dtos);
         return ResponseEntity.status(201).body(responseDtos);
+    }
+    //장소 삭제
+    @DeleteMapping("/{location_id}")
+    @Operation(summary = "장소 삭제", description = "선택한 장소들을 DB에서 삭제합니다.")
+    public ResponseEntity<String> deleteLocation(@PathVariable Long location_id) {
+        String string = locationService.deleteLocation(location_id);
+        return ResponseEntity.ok(string);
     }
 
 }

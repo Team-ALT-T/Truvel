@@ -23,7 +23,6 @@ import java.util.NoSuchElementException;
 public class DayScheduleService {
     private final DayScheduleRepository dayScheduleRepository;
     private final TravelPlanRepository travelPlanRepository;
-    private final LocationService locationService;
     private final ScheduleService scheduleService;
 
     // Response 객체에서 최적화된 일정을 부르기 위한 함수
@@ -46,12 +45,9 @@ public class DayScheduleService {
     // 종속되어있는 schedule을 함께 생성함
     public DaySchedule createDaySchedule(TravelPlan travelPlan, DayScheduleRequest dayScheduleRequest){
 
-        // location service에 아래 함수 추가 필요
-        Location startLocation = locationService.getLocationByName(dayScheduleRequest.getStartLocation());
-        Location endLocation = locationService.getLocationByName(dayScheduleRequest.getEndLocation());
-
-        DaySchedule daySchedule = saveDaySchedule(DaySchedule.of(travelPlan, dayScheduleRequest,startLocation,endLocation));
+        DaySchedule daySchedule = saveDaySchedule(DaySchedule.of(travelPlan, dayScheduleRequest));
         scheduleService.createSchedule(daySchedule, dayScheduleRequest.getSchedules());
+        travelPlan.addDaySchedules(daySchedule);
         return daySchedule;
     }
 
@@ -64,9 +60,7 @@ public class DayScheduleService {
     // 기본적인 update 함수
     public void updateDaySchedule(Long id, DayScheduleRequest dayScheduleRequest){
         DaySchedule daySchedule = dayScheduleRepository.findById(id).orElseThrow();
-        Location startLocation = locationService.getLocationByName(dayScheduleRequest.getStartLocation());
-        Location endLocation = locationService.getLocationByName(dayScheduleRequest.getEndLocation());
-        daySchedule.update(dayScheduleRequest, startLocation, endLocation);
+        daySchedule.update(dayScheduleRequest);
     }
 
     // GET 일별 일정

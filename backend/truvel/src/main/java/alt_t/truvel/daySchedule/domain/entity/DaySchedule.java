@@ -28,18 +28,10 @@ public class DaySchedule {
     private Long day_schedule_id;
 
     // 여행 일정 id 외래키
-    @ManyToOne
+    @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "travel_plan_id", nullable = false)
     @JsonBackReference
     private TravelPlan travelPlan;
-
-    @ManyToOne
-    @JoinColumn(name = "start_location_id", nullable = false)
-    private Location startLocation;
-
-    @ManyToOne
-    @JoinColumn(name = "end_location_id", nullable = false)
-    private Location endLocation;
 
     @NotNull
     private LocalDate date;
@@ -57,29 +49,22 @@ public class DaySchedule {
 
     // id 입력 x
     public static DaySchedule of(final TravelPlan travelPlan,
-                                 final DayScheduleRequest dayScheduleRequest,
-                                 Location startLocation, Location endLocation){
-        return of(travelPlan, null, dayScheduleRequest, startLocation, endLocation);
+                                 final DayScheduleRequest dayScheduleRequest){
+        return of(travelPlan, null, dayScheduleRequest);
     }
     // id 입력 o
     public static DaySchedule of(final TravelPlan travelPlan,
                                  Long id,
-                                 final DayScheduleRequest dayScheduleRequest,
-                                 Location startLocation, Location endLocation){
+                                 final DayScheduleRequest dayScheduleRequest){
         return new DaySchedule(id,
                 travelPlan,
-                startLocation,
-                endLocation,
                 dayScheduleRequest.getDate(),
                 dayScheduleRequest.getStartTime(),
                 dayScheduleRequest.getFinishTime(),
                 dayScheduleRequest.getDayScheduleMemo(),
                 null);
     }
-    public void update(DayScheduleRequest dayScheduleRequest,
-                       Location startLocation, Location endLocation){
-        this.startLocation = startLocation;
-        this.endLocation = endLocation;
+    public void update(DayScheduleRequest dayScheduleRequest){
         this.date = dayScheduleRequest.getDate();
         this.startTime = dayScheduleRequest.getStartTime();
         this.finishTime = dayScheduleRequest.getFinishTime();
