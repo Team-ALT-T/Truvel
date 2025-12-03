@@ -23,7 +23,7 @@ public class Country {
     @Column(nullable = false, length = 100)
     private String korean;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String english;
 
     @Column(nullable = false)

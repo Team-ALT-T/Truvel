@@ -17,9 +17,13 @@ import static lombok.AccessLevel.PROTECTED;
 
 @Entity
 @Getter
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor(access = PROTECTED)
-@Table(name = "day_schedule")
+@Table(name = "day_schedule", indexes = {
+        @Index(name = "travel_plan_id_index", columnList = "travel_plan_id")
+})
+
 @Setter
 public class DaySchedule {
 

@@ -6,6 +6,7 @@ import alt_t.truvel.daySchedule.dayScheduleDTO.requset.ScheduleRequest;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -13,7 +14,11 @@ import java.time.Duration;
 
 @Entity
 @Getter
-@Table(name = "schedule")
+@Builder
+@Table(name = "schedule", indexes = {
+        @Index(name = "day_schedule_id_index", columnList = "day_schedule_id"),
+        @Index(name = "location_id_index", columnList = "location_id")
+})
 @AllArgsConstructor
 @NoArgsConstructor
 public class Schedule {

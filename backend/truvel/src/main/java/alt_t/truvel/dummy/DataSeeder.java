@@ -1,4 +1,4 @@
-package alt_t.truvel.config;
+package alt_t.truvel.dummy;
 
 import alt_t.truvel.searchCountryAndCity.dto.CityDto;
 import alt_t.truvel.searchCountryAndCity.dto.CountryCityData;

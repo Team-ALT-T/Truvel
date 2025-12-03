@@ -33,6 +33,10 @@ public class TravelPlan extends BaseEntity {
     @JoinColumn(name = "city_id", nullable = false)
     private City cityId;
 
+    @Column(name = "title")
+    private String title;
+
+
     @Column(name = "city", nullable = false)
     private String cityName;
 
