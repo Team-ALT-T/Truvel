@@ -1,5 +1,6 @@
 package alt_t.truvel.location.service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -8,6 +9,7 @@ import alt_t.truvel.location.domain.repository.LocationRepository;
 import alt_t.truvel.location.locationDto.response.GooglePlaceResultDto;
 import alt_t.truvel.location.locationDto.response.LocationResponseDto;
 import alt_t.truvel.location.locationDto.request.LocationSaveRequestDto;
+import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import alt_t.truvel.travelPlan.domain.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -41,12 +43,23 @@ public class LocationService {
             return LocationResponseDto.builder()
                     .locationId(saved.getLocation_id()) // 이제 null 아님
                     .place(saved.getName())
-                    .latitude((float) saved.getLatitude())
-                    .longitude((float) saved.getLongitude())
+                    .latitude(saved.getLatitude())
+                    .longitude(saved.getLongitude())
                     .address(saved.getAddress())
                     .category(String.valueOf(saved.getCategory()))
                     .build();
         }).toList();
+    }
+
+    public List<LocationResponseDto> getAll(Long travelPlan_id){
+        TravelPlan travelPlan = travelPlanRepository.findById(travelPlan_id).orElseThrow();
+        List<Location> locations = new ArrayList<>();
+        travelPlan.getDaySchedules().forEach(daySchedule -> {
+            daySchedule.getSchedules().forEach(
+                    schedule -> locations.add(schedule.getLocation())
+            );
+        });
+        return locations.stream().map(LocationResponseDto::new).toList();
     }
 
     public List<Location> getAllLocations() {
@@ -59,5 +72,10 @@ public class LocationService {
 
     public Location getLocationByName(String name) {
         return locationRepository.findByName(name).orElseThrow(() -> new IllegalArgumentException("Invalid location name: " + name));
+    }
+
+    public String deleteLocation(Long id){
+        locationRepository.deleteById(id);
+        return "삭제 완료";
     }
 }

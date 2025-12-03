@@ -1,0 +1,50 @@
+services:
+  mysql:
+    image: mysql:latest
+    container_name: mysql-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: ${DB_NAME}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_PORT}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: springboot_web
+    restart: always
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      # 도커 네트워크 내에서 MySQL과 Redis 접근을 위해 서비스 이름 사용
+      - DB_URL=jdbc:mysql://mysql:3306/${DB_NAME}?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+      - REDIS_HOST=redis
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_started
+
+  redis:
+    container_name: redis
+    image: "redis:7" # redis 버전 명시
+    volumes:
+      - redis-data
+    ports:
+        - "${REDIS_PORT}:6379"
+    command: ["redis-server", "--bind", "0.0.0.0", "--port", "6379"]
+
+volumes:
+  redis-data:
+  mysql-data:

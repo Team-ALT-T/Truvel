@@ -13,8 +13,6 @@ import java.util.List;
 @AllArgsConstructor
 public class DayScheduleRequest {
     // daySchedule DTO Request
-    private String startLocation;
-    private String endLocation;
     private LocalDate date;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "HH:mm:ss")
     @Schema(type = "string", example = "10:30:00", description = "시작 시간 (HH:mm:ss)")

@@ -143,5 +143,4 @@ public class JwtAuthService {
             // token(eyJ...) : "logout" 형태로 저장
         }
     }
-
 }

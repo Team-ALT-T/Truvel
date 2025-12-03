@@ -60,8 +60,6 @@ class DayScheduleServiceTest {
     private CountryRepository countryRepository;
 
     private TravelPlan travelPlan;
-    private Location startLocation;
-    private Location endLocation;
     private Location scheduleLocation; // Added for schedule items
     private Location hangangLocation;
     private DaySchedule daySchedule;
@@ -81,8 +79,6 @@ class DayScheduleServiceTest {
         Country country = countryRepository.save(Country.builder().korean("한국").english("Korea").build());
         City city = cityRepository.save(City.builder().korean("서울").english("Seoul").country(country).build());
 
-        startLocation = locationRepository.save(Location.builder().name("롯데월드").address("주소1").category(PlaceCategory.ATTRACTION).build());
-        endLocation = locationRepository.save(Location.builder().name("인천공항").address("주소2").category(PlaceCategory.DEFAULT).build());
         scheduleLocation = locationRepository.save(Location.builder().name("코엑스").address("주소3").category(PlaceCategory.ATTRACTION).build()); // New location
         hangangLocation = locationRepository.save(Location.builder().name("한강").address("주소4").category(PlaceCategory.ATTRACTION).build());
 
@@ -97,8 +93,6 @@ class DayScheduleServiceTest {
                 .build());
 
         DayScheduleRequest dayScheduleRequest = new DayScheduleRequest(
-                startLocation.getName(),
-                endLocation.getName(),
                 LocalDate.now(),
                 LocalTime.of(9, 0),
                 LocalTime.of(18, 0),
@@ -107,7 +101,7 @@ class DayScheduleServiceTest {
         );
 
         // DaySchedule.of 팩토리 메소드를 사용하여 객체 생성
-        daySchedule = dayScheduleRepository.save(DaySchedule.of(travelPlan, dayScheduleRequest, startLocation, endLocation));
+        daySchedule = dayScheduleRepository.save(DaySchedule.of(travelPlan, dayScheduleRequest));
     }
 
     @Test
@@ -139,8 +133,6 @@ class DayScheduleServiceTest {
         );
 
         DayScheduleRequest request = new DayScheduleRequest(
-                startLocation.getName(),
-                endLocation.getName(),
                 LocalDate.now().plusDays(1),
                 LocalTime.of(10, 0),
                 LocalTime.of(19, 0),
@@ -166,7 +158,6 @@ class DayScheduleServiceTest {
         Schedule lotteWorldSchedule = dayScheduleResponse.getSchedules().stream()
                 .filter(s -> s.getLocation().getName().equals("롯데월드"))
                 .findFirst().orElseThrow(() -> new AssertionError("롯데월드 스케줄이 없습니다."));
-        assertEquals(startLocation.getLocation_id(), lotteWorldSchedule.getLocation().getLocation_id());
         assertEquals(scheduleItem2.getMemo(), lotteWorldSchedule.getMemo());
         assertEquals(scheduleItem2.getStayTime(), lotteWorldSchedule.getStayTime());
 
@@ -183,8 +174,6 @@ class DayScheduleServiceTest {
     void createDaySchedule() {
         // given
         DayScheduleRequest request = new DayScheduleRequest(
-                startLocation.getName(),
-                endLocation.getName(),
                 LocalDate.now().plusDays(1),
                 LocalTime.of(10, 0),
                 LocalTime.of(19, 0),
@@ -208,8 +197,6 @@ class DayScheduleServiceTest {
     void updateDaySchedule() {
         // given
         DayScheduleRequest updateRequest = new DayScheduleRequest(
-                startLocation.getName(),
-                endLocation.getName(),
                 daySchedule.getDate(),
                 LocalTime.of(11, 0), // 시간 변경
                 LocalTime.of(22, 0), // 시간 변경

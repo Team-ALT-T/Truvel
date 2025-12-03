@@ -67,7 +67,7 @@ public class RouteOptimization {
         List<Schedule> sorted = new ArrayList<>();
         Location currentLocation;
         switch (timeSlot){
-            case "morning" -> currentLocation = daySchedule.getStartLocation();
+            case "morning" -> currentLocation = daySchedule.getSchedules().get(0).getLocation();
             case "afternoon", "evening" -> currentLocation = schedules.get(schedules.size() - 1).getLocation();
             default -> throw new RouteOptException("알 수 없는 시간대: " + timeSlot);
         }
@@ -147,7 +147,7 @@ public class RouteOptimization {
         double totalDistance = 0;
         try{
             if (timeSlotSchedule.isEmpty()) {
-                totalDistance = calculateDistance(daySchedule.getStartLocation(), newSchedule.getLocation());
+                totalDistance = calculateDistance(daySchedule.getSchedules().get(0).getLocation(), newSchedule.getLocation());
             }
             else {
                 // 기존 마지막 스케줄에서 새 스케줄까지의 거리 계산

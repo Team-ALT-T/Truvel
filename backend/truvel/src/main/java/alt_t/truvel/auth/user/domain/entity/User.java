@@ -73,14 +73,12 @@ public class User {
 
     public void addTravelPlan(TravelPlan travelPlan) {
         this.travelPlans.add(travelPlan);
-        travelPlan.setUser(this);
+        travelPlan.updateUser(this);
     }
 
 
     public void setEmailVerified(boolean emailVerified) {
         this.emailVerified = emailVerified;
     }
-
-
-
+    
 }

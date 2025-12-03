@@ -61,9 +61,12 @@ public class TravelPlan extends BaseEntity {
     private List<Editor> editors = new ArrayList<>();
 
     // 사용자를 설정하는 메서드
-    public void setUser(User user) {
+    public void updateUser(User user) {
         this.user = user;
     }
 
+    public void addDaySchedules(DaySchedule daySchedules){
+        this.daySchedules.add(daySchedules);
+    }
 
 }
