@@ -84,8 +84,8 @@ class LocationControllerTest {
                 LocationResponseDto.builder()
                         .locationId(1L)
                         .place("서울타워")
-                        .latitude(37.5512f)
-                        .longitude(126.9882f)
+                        .latitude(37.5512)
+                        .longitude(126.9882)
                         .address("서울특별시 용산구 남산공원길 105")
                         .build()
         );
