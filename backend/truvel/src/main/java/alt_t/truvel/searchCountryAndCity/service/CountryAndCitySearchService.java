@@ -43,6 +43,7 @@ public class CountryAndCitySearchService {
      * @param keyword : 사용자가 입력한 국가 이름
      * @return :
      */
+    @Cacheable(value = "countries", key = "#keyword")
     public List<CountrySearchResponse> searchCountries(String keyword) {
         List<Country> countries;
 
@@ -76,6 +77,7 @@ public class CountryAndCitySearchService {
      * @param keyword : 사용자가 입력한 키워드
      * @return : 검색된 도시들을 리스트 형태로 반환
      */
+    @Cacheable(value = "cities", key = "#countryId + '-' + #keyword")
     public List<CitySearchResponse> searchCities(Long countryId, String keyword) {
 
         List<City> cities;
