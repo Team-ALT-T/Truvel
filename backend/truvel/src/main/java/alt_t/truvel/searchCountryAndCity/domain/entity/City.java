@@ -1,12 +1,6 @@
 package alt_t.truvel.searchCountryAndCity.domain.entity;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Column;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,6 +12,10 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @Builder
 @AllArgsConstructor
+@Table(name = "city", indexes = {
+        @Index(name = "idx_city_country_id", columnList = "country_id"),
+        @Index(name = "idx_city_name", columnList = "korean, english")
+})
 public class City {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -26,7 +24,7 @@ public class City {
     @Column(nullable = false, length = 100)
     private String korean;
 
-    @Column(nullable = false, length = 100)
+    @Column(length = 100)
     private String english;
 
     @ManyToOne

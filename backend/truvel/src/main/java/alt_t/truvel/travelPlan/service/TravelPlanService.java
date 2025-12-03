@@ -25,7 +25,6 @@ public class TravelPlanService {
     private final UserRepository userRepository;
     private final CityRepository cityRepository;
 
-
     /**
      * 일정 생성 메서드
      * @param userId : 사용자의 아이디

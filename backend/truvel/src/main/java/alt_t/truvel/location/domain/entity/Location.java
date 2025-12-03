@@ -25,7 +25,8 @@ public class Location {
     private String address;
 
     @NotNull
-    private PlaceCategory category;
+    @Builder.Default
+    private PlaceCategory category = PlaceCategory.DEFAULT;
 
     @Column
     // 위도

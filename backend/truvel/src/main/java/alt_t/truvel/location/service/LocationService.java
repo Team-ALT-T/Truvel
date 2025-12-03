@@ -1,18 +1,16 @@
 package alt_t.truvel.location.service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
+import alt_t.truvel.daySchedule.domain.repository.ScheduleRepository;
 import alt_t.truvel.location.domain.entity.Location;
 import alt_t.truvel.location.domain.repository.LocationRepository;
 import alt_t.truvel.location.locationDto.response.GooglePlaceResultDto;
 import alt_t.truvel.location.locationDto.response.LocationResponseDto;
 import alt_t.truvel.location.locationDto.request.LocationSaveRequestDto;
-import alt_t.truvel.travelPlan.domain.entity.TravelPlan;
 import alt_t.truvel.travelPlan.domain.repository.TravelPlanRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
 
 
 @Service
@@ -22,6 +20,8 @@ public class LocationService {
     private final GooglePlaceClient googlePlaceClient;
     private final LocationRepository locationRepository;
     private final TravelPlanRepository travelPlanRepository;
+    private final ScheduleRepository scheduleRepository;
+
     // 장소 후보 검색
     public List<GooglePlaceResultDto> searchPlaces(String query) {
         return googlePlaceClient.search(query);
@@ -51,14 +51,9 @@ public class LocationService {
         }).toList();
     }
 
+    // 여행 계획에 저장된 장소 목록
     public List<LocationResponseDto> getAll(Long travelPlan_id){
-        TravelPlan travelPlan = travelPlanRepository.findById(travelPlan_id).orElseThrow();
-        List<Location> locations = new ArrayList<>();
-        travelPlan.getDaySchedules().forEach(daySchedule -> {
-            daySchedule.getSchedules().forEach(
-                    schedule -> locations.add(schedule.getLocation())
-            );
-        });
+        List<Location> locations = scheduleRepository.findLocationsByTravelPlanId(travelPlan_id);
         return locations.stream().map(LocationResponseDto::new).toList();
     }
 
