@@ -234,11 +234,25 @@ export default function LoginPage() {
 
     try {
       await loginMutation.mutateAsync({
-        email,
-        password,
+        email: email.trim(),
+        password: password.trim(),
       });
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error?.message || '로그인에 실패했습니다.';
+      // 백엔드에서 보낸 에러 메시지 우선 사용
+      let errorMessage = '로그인에 실패했습니다.';
+      
+      if (error?.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error?.response?.status === 400) {
+        errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      } else if (error?.response?.status === 401) {
+        errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+      } else if (error?.response?.status === 404) {
+        errorMessage = '존재하지 않는 사용자입니다.';
+      } else if (error?.message && !error.message.includes('Request failed')) {
+        errorMessage = error.message;
+      }
+      
       setLoginError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -247,7 +261,7 @@ export default function LoginPage() {
 
   const handleSocialLogin = (provider: string) => {
     // TODO: 소셜 로그인 로직 구현
-    console.log(`${provider} 로그인 시도`);
+    // 소셜 로그인 기능은 추후 구현 예정
   };
 
   const handleSignup = () => {

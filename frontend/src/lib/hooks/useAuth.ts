@@ -33,6 +33,12 @@ export const useSignup = () => {
       // 회원가입 먼저 실행
       const signupResponse = await signup(data);
       
+      // 회원가입 성공 후 이메일과 비밀번호를 sessionStorage에 임시 저장 (자동 로그인용)
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('pendingLoginEmail', data.email);
+        sessionStorage.setItem('pendingLoginPassword', data.password);
+      }
+      
       // 회원가입 성공 후 이메일 인증 코드 발송
       try {
         await sendVerificationCode(data.email);
@@ -73,7 +79,37 @@ export const useVerifyEmailCode = () => {
   const router = useRouter();
 
   return useMutation({
-    mutationFn: (data: EmailVerificationConfirmRequest) => verifyEmailCode(data.email, data.code),
+    mutationFn: async (data: EmailVerificationConfirmRequest) => {
+      const result = await verifyEmailCode(data.email, data.code);
+      
+      // 인증 성공 후 자동 로그인 시도
+      if (typeof window !== 'undefined') {
+        const pendingEmail = sessionStorage.getItem('pendingLoginEmail');
+        const pendingPassword = sessionStorage.getItem('pendingLoginPassword');
+        
+        // 저장된 이메일과 비밀번호가 있고, 현재 인증한 이메일과 일치하면 자동 로그인
+        if (pendingEmail === data.email && pendingPassword) {
+          try {
+            const loginResponse = await login({ email: pendingEmail, password: pendingPassword });
+            
+            // 토큰 저장
+            localStorage.setItem('accessToken', loginResponse.accessToken);
+            localStorage.setItem('refreshToken', loginResponse.refreshToken);
+            
+            // 임시 저장된 비밀번호 삭제 (보안)
+            sessionStorage.removeItem('pendingLoginEmail');
+            sessionStorage.removeItem('pendingLoginPassword');
+          } catch (loginError) {
+            console.error('자동 로그인 실패:', loginError);
+            // 자동 로그인 실패해도 인증은 성공했으므로 계속 진행
+            sessionStorage.removeItem('pendingLoginEmail');
+            sessionStorage.removeItem('pendingLoginPassword');
+          }
+        }
+      }
+      
+      return result;
+    },
     onSuccess: () => {
       // 인증 성공 시 성공 페이지로 이동
       router.push('/auth/success');

@@ -137,18 +137,19 @@ export default function PopularTripsPage() {
 
     // CountrySection 형식으로 변환
     return Array.from(countryMap.values())
-      .sort((a, b) => a.countryName.localeCompare(b.countryName)) // 국가명 정렬
+      .sort((a, b) => a.countryId - b.countryId) // countryId 순서로 정렬
       .map(countryData => ({
         id: String(countryData.countryId),
         countryId: countryData.countryId,
         country: countryData.countryName,
         cities: countryData.cities
-          .sort((a, b) => a.koreanName.localeCompare(b.koreanName)) // 도시명 정렬
+          .filter(city => city.korean) // korean이 없는 도시 제외
+          .sort((a, b) => a.korean.localeCompare(b.korean)) // 도시명 정렬
           .map(city => ({
             id: String(city.cityId),
             cityId: city.cityId,
             countryId: city.countryId,
-            name: city.koreanName,
+            name: city.korean,
             image: '/icons/blank.png',
           }))
       }))
@@ -163,13 +164,13 @@ export default function PopularTripsPage() {
     
     // 인기 도시명에 해당하는 도시들을 찾아서 반환
     const popularCities = allCitiesForPopular
-      .filter(city => POPULAR_CITY_NAMES.includes(city.koreanName))
+      .filter(city => POPULAR_CITY_NAMES.includes(city.korean))
       .slice(0, 6)
       .map(city => ({
         id: String(city.cityId),
         cityId: city.cityId,
         countryId: city.countryId,
-        name: city.koreanName,
+        name: city.korean,
         image: '/icons/blank.png',
       }))
     
@@ -295,13 +296,13 @@ export default function PopularTripsPage() {
               key={country.countryId} 
               $active={selectedCountryId === country.countryId} 
               onClick={() => {
-                setQuery('')
-                setSearchQuery('')
-                setSelectedCountryId(country.countryId)
-              }}
-            >
-              {country.koreanName}
-            </Chip>
+              setQuery('')
+              setSearchQuery('')
+              setSelectedCountryId(country.countryId)
+            }}
+          >
+            {country.koreanName}
+          </Chip>
           ))}
         </CategoryChips>
 

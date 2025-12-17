@@ -118,11 +118,23 @@ const MyTripsPage = () => {
   }
 
   if (error) {
+    // 401 에러(인증 실패)인 경우 로그인 페이지로 리다이렉트
+    const errorStatus = (error as any)?.response?.status;
+    if (errorStatus === 401 || errorStatus === 403) {
+      if (typeof window !== 'undefined') {
+        window.location.href = '/auth/login';
+      }
+      return null;
+    }
+
     return (
       <PageContainer>
         <Inner>
           <Header>내 여행</Header>
           <ErrorMessage>여행 일정을 불러오는데 실패했습니다.</ErrorMessage>
+          <RegisterButton onClick={handlePopularClick} style={{ marginTop: '1rem' }}>
+            여행 등록하기
+          </RegisterButton>
         </Inner>
       </PageContainer>
     )
