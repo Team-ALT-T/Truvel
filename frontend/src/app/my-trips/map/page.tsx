@@ -1,19 +1,51 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { useRouter } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import LocationSearchInput from './components/LocationSearchInput';
+
+// 구글 맵을 클라이언트 사이드에서만 로드 (SSR 방지)
+const GoogleMapComponent = dynamic(
+  () => import('./components/GoogleMapComponent'),
+  { ssr: false, loading: () => <div style={{ width: '100%', height: '100%', background: '#f0f0f0' }}>지도 로딩 중...</div> }
+);
 
 export default function Page() {
   const router = useRouter();
   const [selectedPlaces, setSelectedPlaces] = useState<
-    { name: string; address: string; image?: string }[]
+    { name: string; address: string; latitude: number; longitude: number; image?: string }[]
   >([]);
-  const [currentPin, setCurrentPin] = useState<{ name: string; address: string } | null>(null);
+  const [currentPin, setCurrentPin] = useState<{ name: string; address: string; latitude: number; longitude: number } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
+  const [initialCity, setInitialCity] = useState<string | null>(null);
+  const [cityCenter, setCityCenter] = useState<{ lat: number; lng: number } | null>(null);
 
-  const handleSelect = (place: { name: string; address: string }) => {
+  // popular에서 선택한 도시 정보 읽기
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const selectedCitiesStr = sessionStorage.getItem('selectedCities');
+      if (selectedCitiesStr) {
+        try {
+          const selectedCities = JSON.parse(selectedCitiesStr);
+          if (selectedCities && selectedCities.length > 0) {
+            // 첫 번째 선택된 도시로 초기 중심 설정
+            setInitialCity(selectedCities[0].name);
+          }
+        } catch (e) {
+          console.error('Failed to parse selected cities', e);
+        }
+      }
+    }
+  }, []);
+
+  // 도시 중심 좌표 변경 핸들러
+  const handleCityCenterChange = useCallback((center: { lat: number; lng: number } | null) => {
+    setCityCenter(center);
+  }, []);
+
+  const handleSelect = (place: { name: string; address: string; latitude: number; longitude: number }) => {
     const isDuplicate = selectedPlaces.some(
       (p) => p.name === place.name && p.address === place.address
     );
@@ -45,7 +77,11 @@ export default function Page() {
     }
     
     if (selectedPlaces.length > 0) {
-      router.push('/my-trips/optimize');
+      // 선택한 장소들을 sessionStorage에 저장
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('selectedPlaces', JSON.stringify(selectedPlaces));
+      }
+      router.push('optimize/route');
     }
   };
 
@@ -59,7 +95,17 @@ export default function Page() {
   };
 
   return (
-    <FullScreenBackground>
+    <FullScreenContainer>
+      {/* 구글 맵 배경 */}
+      <MapContainer>
+        <GoogleMapComponent 
+          selectedPlace={currentPin}
+          selectedPlaces={selectedPlaces}
+          initialCityName={initialCity}
+          onCityCenterChange={handleCityCenterChange}
+        />
+      </MapContainer>
+
       <OverlayContent>
         {/* 모바일 스타일 헤더 - 화면 전체 너비 */}
         <MobileHeader>
@@ -78,20 +124,9 @@ export default function Page() {
             selectedPlaces={selectedPlaces}
             onClear={handleClear}
             onSearchStart={handleSearchStart}
+            searchCenter={cityCenter}
           />
         </SearchSection>
-
-        {/* 현재 선택된 장소 핀과 정보 박스 */}
-        {currentPin && !isSearching && (
-          <PinAndBoxWrapper>
-            <BoxBackground src="/icons/box.png" alt="box" />
-            <BoxContent>
-              <PlaceName>{currentPin.name}</PlaceName>
-              <PlaceAddress>{currentPin.address}</PlaceAddress>
-            </BoxContent>
-            <PinIcon src="/icons/pin.png" alt="pin" />
-          </PinAndBoxWrapper>
-        )}
 
         {/* 하단 액션 섹션 - 검색 중일 때는 숨김 */}
         {!isSearching && (
@@ -114,19 +149,24 @@ export default function Page() {
           </BottomActionSection>
         )}
       </OverlayContent>
-    </FullScreenBackground>
+    </FullScreenContainer>
   );
 }
 
-const FullScreenBackground = styled.div`
+const FullScreenContainer = styled.div`
   position: relative;
   width: 100%;
   height: 100dvh;
-  background-image: url('/icons/EXmap.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
   overflow: hidden;
+`;
+
+const MapContainer = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
 `;
 
 const OverlayContent = styled.div`
@@ -139,6 +179,13 @@ const OverlayContent = styled.div`
   flex-direction: column;
   background: transparent;
   box-sizing: border-box;
+  z-index: 1;
+  pointer-events: none; // 지도 클릭 가능하도록
+
+  // 자식 요소들은 클릭 가능하도록
+  > * {
+    pointer-events: auto;
+  }
 `;
 
 const MobileHeader = styled.div`
@@ -330,55 +377,3 @@ const AddButton = styled.button`
   }
 `;
 
-const PinAndBoxWrapper = styled.div`
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column-reverse;
-  align-items: center;
-  z-index: 10;
-`;
-
-const PinIcon = styled.img`
-  width: 28px;
-  height: 36px;
-  z-index: 2;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
-`;
-
-const BoxBackground = styled.img`
-  width: 280px;
-  height: auto;
-  position: absolute;
-  top: -100px;
-  z-index: 1;
-  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.15));
-`;
-
-const BoxContent = styled.div`
-  position: absolute;
-  top: -100px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: 280px;
-  padding: 16px;
-  z-index: 2;
-`;
-
-const PlaceName = styled.div`
-  font-size: 16px;
-  font-weight: 600;
-  margin-bottom: 6px;
-  color: #1C1C1C;
-  text-align: center;
-`;
-
-const PlaceAddress = styled.div`
-  font-size: 14px;
-  color: #666;
-  text-align: center;
-  line-height: 1.4;
-`;

@@ -23,8 +23,12 @@ public class LocationController {
     // 장소 검색
     @GetMapping("/search")
     @Operation(summary = "장소 검색", description = "구글 맵 API를 통해 장소를 검색합니다.")
-    public ResponseEntity<?> searchPlaces(@RequestParam String query) {
-        List<GooglePlaceResultDto> results = locationService.searchPlaces(query);
+    public ResponseEntity<?> searchPlaces(
+            @RequestParam String query,
+            @RequestParam(required = false) Double lat,
+            @RequestParam(required = false) Double lng
+    ) {
+        List<GooglePlaceResultDto> results = locationService.searchPlaces(query, lat, lng);
 
         return ResponseEntity.ok(results);
     }

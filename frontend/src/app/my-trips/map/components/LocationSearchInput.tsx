@@ -1,117 +1,126 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import { useSearchPlaces } from '@/lib/hooks/useLocation';
+import { GooglePlaceResult } from '@/lib/api/location';
 
 interface LocationSearchInputProps {
-  onSelect: (place: { name: string; address: string }) => void;
+  onSelect: (place: { name: string; address: string; latitude: number; longitude: number }) => void;
   selectedPlaces?: { name: string; address: string }[];
   onClear?: () => void; 
   onSearchStart?: () => void;
+  searchCenter?: { lat: number; lng: number } | null;
 }
 
-interface SearchResult {
-  name: string;
-  address: string;
+interface SearchResult extends GooglePlaceResult {
   rating?: number;
   reviewCount?: number;
   category?: string;
   images: string[];
 }
 
-export default function LocationSearchInput({ onSelect, selectedPlaces = [], onClear, onSearchStart }: LocationSearchInputProps) {
+type SortType = 'none' | 'openNow' | 'rating' | 'reviewCount';
+
+export default function LocationSearchInput({ onSelect, selectedPlaces = [], onClear, onSearchStart, searchCenter }: LocationSearchInputProps) {
   const [input, setInput] = useState('');
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [sortType, setSortType] = useState<SortType>('none');
+  
+  // 디바운싱: 입력 후 500ms 대기
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(input.trim());
+    }, 500);
 
-  // 검색 결과 시뮬레이션 (실제로는 API 호출)
-  const mockSearchResults: SearchResult[] = [
-    {
-      name: "도쿄 디즈니씨",
-      address: "일본 도쿄도 우라야스시",
-      rating: 4.8,
-      reviewCount: 1228,
-      category: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-      images: ["/icons/blank.png", "/icons/blank.png", "/icons/blank.png", "/icons/blank.png", "/icons/blank.png"]
-    },
-    {
-      name: "도쿄 디즈니랜드",
-      address: "일본 도쿄도 우라야스시",
-      rating: 4.7,
-      reviewCount: 1156,
-      category: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-      images: ["/icons/blank.png", "/icons/blank.png", "/icons/blank.png", "/icons/blank.png"]
-    },
-    {
-      name: "도쿄 타워",
-      address: "일본 도쿄도 미나토구",
-      rating: 4.6,
-      reviewCount: 892,
-      category: "관광명소, 전망대",
-      images: ["/icons/blank.png", "/icons/blank.png", "/icons/blank.png"]
-    },
-    {
-      name: "시부야 스크램블 교차로",
-      address: "일본 도쿄도 시부야구",
-      rating: 4.5,
-      reviewCount: 756,
-      category: "관광명소, 도시경관",
-      images: ["/icons/blank.png", "/icons/blank.png", "/icons/blank.png", "/icons/blank.png"]
-    },
-    {
-      name: "하라주쿠",
-      address: "일본 도쿄도 시부야구",
-      rating: 4.4,
-      reviewCount: 634,
-      category: "쇼핑, 문화",
-      images: ["/icons/blank.png", "/icons/blank.png", "/icons/blank.png"]
+    return () => clearTimeout(timer);
+  }, [input]);
+
+  // 실제 API 호출 (도시 좌표를 포함하여 검색)
+  const { data: apiResults, isLoading, error } = useSearchPlaces(
+    debouncedQuery, 
+    searchCenter?.lat, 
+    searchCenter?.lng, 
+    debouncedQuery.length > 0
+  );
+
+  // 구글 API 키 (사진 URL 생성용)
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  // 카테고리 타입을 한국어로 변환
+  const translateTypes = (types?: string[] | null): string => {
+    if (!types || types.length === 0) return "장소";
+    
+    const typeMap: { [key: string]: string } = {
+      restaurant: "음식점",
+      cafe: "카페",
+      food: "음식점",
+      lodging: "숙박",
+      tourist_attraction: "관광명소",
+      amusement_park: "테마파크",
+      museum: "박물관",
+      park: "공원",
+      shopping_mall: "쇼핑몰",
+      store: "상점",
+      bar: "바",
+      night_club: "나이트클럽",
+      point_of_interest: "관심지점",
+    };
+
+    const translated = types
+      .map(type => typeMap[type])
+      .filter(Boolean);
+
+    // 중복 제거
+    const unique = [...new Set(translated)];
+    
+    // 최대 3개까지만
+    return unique.length > 0 ? unique.slice(0, 3).join(", ") : "장소";
+  };
+
+  // API 결과를 UI 형식으로 변환
+  useEffect(() => {
+    if (apiResults && apiResults.length > 0) {
+      const formattedResults: SearchResult[] = apiResults.map(result => {
+        // 구글 사진 URL 생성
+        const imageUrl = result.photoReference && apiKey
+          ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${result.photoReference}&key=${apiKey}`
+          : "/icons/blank.png";
+
+        return {
+          ...result,
+          rating: result.rating || undefined,
+          reviewCount: result.reviewCount || undefined,
+          category: translateTypes(result.types),
+          images: [imageUrl],
+        };
+      });
+      setSearchResults(formattedResults);
+    } else if (debouncedQuery.length > 0 && !isLoading) {
+      setSearchResults([]);
     }
-  ];
+  }, [apiResults, debouncedQuery, isLoading, apiKey]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setInput(value);
     
-    if (value) { // 빈 문자열이 아니면 무조건 검색 (숫자만 있어도 됨)
+    if (value) {
       if (onSearchStart) onSearchStart();
-      handleSearch();
       // 검색 중일 때는 현재 핀을 숨김
       if (onClear) onClear();
     } else {
       setSearchResults([]);
-      setIsSearching(false);
+      setDebouncedQuery('');
       if (onClear) onClear();
     }
-  };
-
-  const handleSearch = () => {
-    const trimmed = input.trim();
-    if (!trimmed) { // 빈 문자열이 아니면 무조건 검색
-      setSearchResults([]);
-      setIsSearching(false);
-      return;
-    }
-
-    setIsSearching(true);
-    // 실제 검색 API 호출 대신 시뮬레이션
-    setTimeout(() => {
-      // 입력된 텍스트가 포함된 결과만 필터링 (숫자도 포함)
-      const filteredResults = mockSearchResults.filter(result => 
-        result.name.toLowerCase().includes(trimmed.toLowerCase()) ||
-        result.address.toLowerCase().includes(trimmed.toLowerCase()) ||
-        result.category?.toLowerCase().includes(trimmed.toLowerCase()) ||
-        result.rating?.toString().includes(trimmed) ||
-        result.reviewCount?.toString().includes(trimmed)
-      );
-      setSearchResults(filteredResults);
-      setIsSearching(false);
-    }, 500);
   };
 
   const handleClear = () => {
     setInput('');
     setSearchResults([]);
-    setIsSearching(false);
+    setDebouncedQuery('');
     if (onClear) onClear();
   };
 
@@ -125,17 +134,55 @@ export default function LocationSearchInput({ onSelect, selectedPlaces = [], onC
       onSelect({
         name: place.name,
         address: place.address,
+        latitude: place.latitude,
+        longitude: place.longitude,
       });
     }
     
     setInput('');
     setSearchResults([]);
-    setIsSearching(false);
+    setDebouncedQuery('');
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') handleSearch();
+  // 정렬/필터 함수
+  const getSortedResults = () => {
+    if (!searchResults || searchResults.length === 0) return [];
+
+    let sorted = [...searchResults];
+
+    switch (sortType) {
+      case 'openNow':
+        // 영업 중인 것들을 위로
+        sorted.sort((a, b) => {
+          if (a.openNow === b.openNow) return 0;
+          return a.openNow ? -1 : 1;
+        });
+        break;
+      case 'rating':
+        // 평점 높은 순
+        sorted.sort((a, b) => {
+          const ratingA = a.rating || 0;
+          const ratingB = b.rating || 0;
+          return ratingB - ratingA;
+        });
+        break;
+      case 'reviewCount':
+        // 리뷰 많은 순
+        sorted.sort((a, b) => {
+          const countA = a.reviewCount || 0;
+          const countB = b.reviewCount || 0;
+          return countB - countA;
+        });
+        break;
+      default:
+        // 정렬 없음 (원래 순서)
+        break;
+    }
+
+    return sorted;
   };
+
+  const displayedResults = getSortedResults();
 
   return (
     <Container>
@@ -145,12 +192,11 @@ export default function LocationSearchInput({ onSelect, selectedPlaces = [], onC
           placeholder="장소 이름, 주소를 입력해주세요"
           value={input}
           onChange={handleInputChange}
-          onKeyPress={handleKeyPress}
         />
         {input && (
           <ClearButton onClick={handleClear}>✕</ClearButton>
         )}
-        <SearchIcon src="/icons/Search_light.png" alt="검색" onClick={handleSearch} />
+        <SearchIcon src="/icons/Search_light.png" alt="검색" />
       </InputContainer>
 
       {/* 검색 결과 - 아래에서 올라오는 형태 */}
@@ -160,15 +206,30 @@ export default function LocationSearchInput({ onSelect, selectedPlaces = [], onC
     
         <StickyBar>
           <FilterButtons>
-            <FilterButton>지금 영업 중</FilterButton>
-            <FilterButton>최고 평점</FilterButton>
-            <FilterButton>리뷰 수</FilterButton>
+            <FilterButton 
+              $active={sortType === 'openNow'}
+              onClick={() => setSortType(sortType === 'openNow' ? 'none' : 'openNow')}
+            >
+              지금 영업 중
+            </FilterButton>
+            <FilterButton 
+              $active={sortType === 'rating'}
+              onClick={() => setSortType(sortType === 'rating' ? 'none' : 'rating')}
+            >
+              최고 평점
+            </FilterButton>
+            <FilterButton 
+              $active={sortType === 'reviewCount'}
+              onClick={() => setSortType(sortType === 'reviewCount' ? 'none' : 'reviewCount')}
+            >
+              리뷰 수
+            </FilterButton>
             <ClearFilterButton onClick={() => setSearchResults([])}>✕</ClearFilterButton>
           </FilterButtons>
         </StickyBar>
     
         <ResultsList>
-        {searchResults.map((result, index) => (
+        {displayedResults.map((result, index) => (
     <ResultItem key={index} onClick={() => handleSelectPlace(result)}>
       {/* 가로 스크롤 썸네일 */}
       <ResultImagesContainer>
@@ -190,7 +251,7 @@ export default function LocationSearchInput({ onSelect, selectedPlaces = [], onC
             {result.rating} ({result.reviewCount?.toLocaleString() || 0})
             <StarIcon>⭐</StarIcon>
           </ResultRating>
-          <ResultAddress>📍 장소의 상세 주소 입력칸</ResultAddress>
+          <ResultAddress>📍 {result.address}</ResultAddress>
         </ResultContent>
 
         <SelectButton type="button">선택</SelectButton>
@@ -202,9 +263,16 @@ export default function LocationSearchInput({ onSelect, selectedPlaces = [], onC
       )}
 
       {/* 로딩 상태 */}
-      {isSearching && (
+      {isLoading && debouncedQuery && (
         <LoadingContainer>
           <LoadingText>검색 중...</LoadingText>
+        </LoadingContainer>
+      )}
+
+      {/* 에러 상태 */}
+      {error && debouncedQuery && (
+        <LoadingContainer>
+          <LoadingText style={{ color: '#ef4444' }}>검색 결과를 불러올 수 없습니다.</LoadingText>
         </LoadingContainer>
       )}
     </Container>
@@ -321,15 +389,20 @@ const FilterButtons = styled.div`
   }
 `;
 
-const FilterButton = styled.button`
+const FilterButton = styled.button<{ $active?: boolean }>`
   padding: 10px 14px;
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
+  background: ${({ $active }) => $active ? '#3CA6FF' : '#f8f9fa'};
+  border: 1px solid ${({ $active }) => $active ? '#3CA6FF' : '#e9ecef'};
   border-radius: 20px;
   font-size: 14px;
-  color: #495057;
+  color: ${({ $active }) => $active ? 'white' : '#495057'};
   white-space: nowrap;
   flex-shrink: 0;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: ${({ $active }) => $active ? '#3295e6' : '#e9ecef'};
+  }
 
   @media (min-width: 768px) {
     padding: 12px 18px;
