@@ -23,8 +23,8 @@ public class LocationService {
     private final ScheduleRepository scheduleRepository;
 
     // 장소 후보 검색
-    public List<GooglePlaceResultDto> searchPlaces(String query) {
-        return googlePlaceClient.search(query);
+    public List<GooglePlaceResultDto> searchPlaces(String query, Double lat, Double lng) {
+        return googlePlaceClient.search(query, lat, lng);
     }
 
     // 장소 저장

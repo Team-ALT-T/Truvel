@@ -22,17 +22,44 @@ public class GooglePlaceClient {
     @Value("${spring.google.api.key}")
     private String apiKey;
 
-    public List<GooglePlaceResultDto> search(String query) {
-        String url = "https://maps.googleapis.com/maps/api/place/textsearch/json" +
-                "?query={query}" +
-                "&key={key}" +
-                "&language=ko";
+    public List<GooglePlaceResultDto> search(String query, Double lat, Double lng) {
+        StringBuilder urlBuilder = new StringBuilder("https://maps.googleapis.com/maps/api/place/textsearch/json");
+        urlBuilder.append("?query={query}");
+        
+        // 위치 정보가 있으면 location과 radius 파라미터 추가
+        if (lat != null && lng != null) {
+            urlBuilder.append("&location={lat},{lng}");
+            urlBuilder.append("&radius=10000"); // 10km 반경
+        }
+        
+        urlBuilder.append("&language=ko");
+        urlBuilder.append("&key={key}");
 
+        String url = urlBuilder.toString();
         System.out.println("[GooglePlaceClient] 요청 URL 템플릿: " + url);
+        System.out.println("[GooglePlaceClient] 검색 위치: lat=" + lat + ", lng=" + lng);
 
         try {
-            ResponseEntity<GooglePlaceTextSearchResponseDto> response =
-                    restTemplate.getForEntity(url, GooglePlaceTextSearchResponseDto.class, query, apiKey);
+            ResponseEntity<GooglePlaceTextSearchResponseDto> response;
+            
+            if (lat != null && lng != null) {
+                response = restTemplate.getForEntity(
+                    url, 
+                    GooglePlaceTextSearchResponseDto.class, 
+                    query, 
+                    lat, 
+                    lng, 
+                    apiKey
+                );
+            } else {
+                // 위치 정보 없으면 기존 방식
+                response = restTemplate.getForEntity(
+                    url, 
+                    GooglePlaceTextSearchResponseDto.class, 
+                    query, 
+                    apiKey
+                );
+            }
 
             GooglePlaceTextSearchResponseDto body = response.getBody();
             System.out.println("[GooglePlaceClient] 응답 body: " + body);
@@ -46,14 +73,31 @@ public class GooglePlaceClient {
                 throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
             }
 
-            return body.getResults().stream().map(r ->
-                    new GooglePlaceResultDto(
-                            r.getName(),
-                            r.getGeometry().getLocation().getLat(),
-                            r.getGeometry().getLocation().getLng(),
-                            r.getFormattedAddress()
-                    )
-            ).toList();
+            return body.getResults().stream().map(r -> {
+                // 첫 번째 사진의 photo_reference 가져오기
+                String photoRef = null;
+                if (r.getPhotos() != null && !r.getPhotos().isEmpty()) {
+                    photoRef = r.getPhotos().get(0).getPhotoReference();
+                }
+
+                // 영업 중 여부
+                Boolean openNow = null;
+                if (r.getOpeningHours() != null) {
+                    openNow = r.getOpeningHours().getOpenNow();
+                }
+
+                return new GooglePlaceResultDto(
+                        r.getName(),
+                        r.getGeometry().getLocation().getLat(),
+                        r.getGeometry().getLocation().getLng(),
+                        r.getFormattedAddress(),
+                        r.getRating(),
+                        r.getUserRatingsTotal(),
+                        r.getTypes(),
+                        photoRef,
+                        openNow
+                );
+            }).toList();
 
         } catch (RestClientException e) {
             e.printStackTrace();

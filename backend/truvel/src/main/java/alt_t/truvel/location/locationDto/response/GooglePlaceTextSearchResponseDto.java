@@ -29,6 +29,46 @@ public class GooglePlaceTextSearchResponseDto {
 
         private Geometry geometry;
 
+        // 평점 (0.0 ~ 5.0)
+        private Float rating;
+
+        // 리뷰 수
+        @JsonProperty("user_ratings_total")
+        private Integer userRatingsTotal;
+
+        // 카테고리 (예: ["restaurant", "food", "point_of_interest"])
+        private List<String> types;
+
+        // 사진 정보
+        private List<Photo> photos;
+
+        // 가격대 (0 ~ 4)
+        @JsonProperty("price_level")
+        private Integer priceLevel;
+
+        // 영업 중 여부
+        @JsonProperty("opening_hours")
+        private OpeningHours openingHours;
+
+        @Getter
+        @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class Photo {
+            @JsonProperty("photo_reference")
+            private String photoReference;
+
+            private Integer height;
+            private Integer width;
+        }
+
+        @Getter
+        @NoArgsConstructor
+        @JsonIgnoreProperties(ignoreUnknown = true)
+        public static class OpeningHours {
+            @JsonProperty("open_now")
+            private Boolean openNow;
+        }
+
         @Getter
         @NoArgsConstructor
         @JsonIgnoreProperties(ignoreUnknown = true)
