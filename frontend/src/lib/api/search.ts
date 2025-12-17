@@ -10,14 +10,14 @@ export interface CountrySearchResponse {
 export interface CitySearchResponse {
   cityId: number;
   countryId: number;
-  koreanName: string;
-  englishName: string;
+  korean: string;
+  english: string;
 }
 
 // 국가 검색 API
 export const searchCountries = async (keyword?: string): Promise<CountrySearchResponse[]> => {
   const params = keyword ? { keyword } : {};
-  const response = await apiClient.get<CountrySearchResponse[]>('/search/countries', { params });
+  const response = await apiClient.get<CountrySearchResponse[]>('/countries', { params });
   return response.data;
 };
 
@@ -27,7 +27,7 @@ export const searchCities = async (countryId?: number, keyword?: string): Promis
   if (countryId) params.countryId = countryId;
   if (keyword) params.keyword = keyword;
   
-  const response = await apiClient.get<CitySearchResponse[]>('/search/cities', { params });
+  const response = await apiClient.get<CitySearchResponse[]>('/cities', { params });
   return response.data;
 };
 

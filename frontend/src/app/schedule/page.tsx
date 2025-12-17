@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import * as S from "./stlyes";
 
@@ -53,14 +54,16 @@ const TravelDatePicker: React.FC<CalendarProps> = ({
   onDateSelect,
   initialDates = [],
 }) => {
+  const router = useRouter();
   const [selectedDates, setSelectedDates] = useState<Date[]>(initialDates);
 
-  // 현재 달부터 6개월간 표시
+  // 현재 달부터 12개월간 표시
   const generateMonths = useCallback((): Date[] => {
     const months: Date[] = [];
-    const currentDate: Date = new Date(2024, 11, 1); // 2024년 12월부터 시작
+    const today = new Date();
+    const currentDate: Date = new Date(today.getFullYear(), today.getMonth(), 1);
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 12; i++) {
       const month: Date = new Date(
         currentDate.getFullYear(),
         currentDate.getMonth() + i,
@@ -200,10 +203,26 @@ const TravelDatePicker: React.FC<CalendarProps> = ({
   );
 
   const handleComplete = useCallback((): void => {
-    console.log("선택된 날짜들:", selectedDates);
+    if (selectedDates.length === 0) return;
+    
+    // localStorage에 선택된 날짜 저장
+    localStorage.setItem('selectedTravelDates', JSON.stringify(selectedDates));
+    
+    // 시작일과 종료일 계산
+    const startDate = selectedDates[0];
+    const endDate = selectedDates[selectedDates.length - 1];
+    
+    console.log("선택된 날짜들:", {
+      startDate: startDate.toLocaleDateString(),
+      endDate: endDate.toLocaleDateString(),
+      totalDays: selectedDates.length
+    });
+    
     onDateSelect?.(selectedDates);
-    // 선택 완료 로직
-  }, [selectedDates, onDateSelect]);
+    
+    // map 페이지로 이동하여 장소 추가
+    router.push('/my-trips/map');
+  }, [selectedDates, onDateSelect, router]);
 
   const weekDays: readonly WeekDay[] = [
     "S",
@@ -220,7 +239,7 @@ const TravelDatePicker: React.FC<CalendarProps> = ({
       {/* 헤더 */}
       <S.Header>
         <S.HeaderContent>
-          <S.BackButton>
+          <S.BackButton onClick={() => router.back()}>
             <ChevronLeft className="w-6 h-6 text-gray-600" />
           </S.BackButton>
           <S.Title>여행 날짜 선택</S.Title>
