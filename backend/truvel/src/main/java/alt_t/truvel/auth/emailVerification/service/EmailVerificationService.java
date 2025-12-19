@@ -60,7 +60,7 @@ public class EmailVerificationService {
 
         emailSenderService.sendEmail(
                 email,
-                "Truvel 이메일 인증 코드",
+                "Truvel 이메일 인증 코드입니다.",
                 "인증 코드: " + code + "\n10분 내로 입력해주세요."
         );
     }

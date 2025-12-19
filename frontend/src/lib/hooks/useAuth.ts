@@ -39,13 +39,7 @@ export const useSignup = () => {
         sessionStorage.setItem('pendingLoginPassword', data.password);
       }
       
-      // 회원가입 성공 후 이메일 인증 코드 발송
-      try {
-        await sendVerificationCode(data.email);
-      } catch (emailError) {
-        console.error('이메일 발송 실패:', emailError);
-        // 이메일 발송 실패해도 회원가입은 성공했으므로 계속 진행
-      }
+      // 이메일 발송은 verify 페이지에서 자동으로 처리되므로 여기서는 제거
       
       return signupResponse;
     },
