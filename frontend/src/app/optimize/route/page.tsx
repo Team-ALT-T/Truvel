@@ -109,13 +109,13 @@ const ToggleGroup = styled.div`
   gap: 8px;
 `;
 
-const Toggle = styled.button<{active?: boolean}>`
+const Toggle = styled.button<{$active?: boolean}>`
   height: 40px;
   padding: 0 14px;
   border-radius: 10px;
-  border: 1px solid ${p => (p.active ? "#777777" : "#eeeeee")};
-  background: ${p => (p.active ? "#777777" : "#ffffff")};
-  color: ${p => (p.active ? "#ffffff" : "#1C1C1C")};
+  border: 1px solid ${p => (p.$active ? "#777777" : "#eeeeee")};
+  background: ${p => (p.$active ? "#777777" : "#ffffff")};
+  color: ${p => (p.$active ? "#ffffff" : "#1C1C1C")};
   font-weight: 600;
 `;
 
@@ -178,8 +178,8 @@ function DayBlock({ index, day, onChange }: { index: number; day: Day; onChange:
       <FieldTitle>여행 출발 시간</FieldTitle>
       <TimeRow>
         <ToggleGroup>
-          <Toggle active={startAm} onClick={() => onChange({ ...day, startAm: true })}>AM</Toggle>
-          <Toggle active={!startAm} onClick={() => onChange({ ...day, startAm: false })}>PM</Toggle>
+          <Toggle $active={startAm} onClick={() => onChange({ ...day, startAm: true })}>AM</Toggle>
+          <Toggle $active={!startAm} onClick={() => onChange({ ...day, startAm: false })}>PM</Toggle>
         </ToggleGroup>
         <InputGroup>
           <TimeInput
@@ -213,8 +213,8 @@ function DayBlock({ index, day, onChange }: { index: number; day: Day; onChange:
       <FieldTitle>여행 도착 시간</FieldTitle>
       <TimeRow>
         <ToggleGroup>
-          <Toggle active={endAm} onClick={() => onChange({ ...day, endAm: true })}>AM</Toggle>
-          <Toggle active={!endAm} onClick={() => onChange({ ...day, endAm: false })}>PM</Toggle>
+          <Toggle $active={endAm} onClick={() => onChange({ ...day, endAm: true })}>AM</Toggle>
+          <Toggle $active={!endAm} onClick={() => onChange({ ...day, endAm: false })}>PM</Toggle>
         </ToggleGroup>
         <InputGroup>
           <TimeInput
@@ -251,26 +251,58 @@ function DayBlock({ index, day, onChange }: { index: number; day: Day; onChange:
 export default function RouteOptimizePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // schedule에서 선택한 날짜 읽어오기
   const initialDays = React.useMemo(() => {
-    const startParam = searchParams?.get("start");
-    const daysParam = Number(searchParams?.get("days") || 3);
-    const start = startParam ? new Date(startParam) : new Date();
+    if (typeof window === 'undefined') {
+      return [];
+    }
+
+    try {
+      const selectedDatesStr = localStorage.getItem('selectedTravelDates');
+      if (selectedDatesStr) {
+        const selectedDates: string[] = JSON.parse(selectedDatesStr);
+        
+        // 문자열을 Date 객체로 변환하고 정렬
+        const dates = selectedDates
+          .map(dateStr => new Date(dateStr))
+          .filter(date => !isNaN(date.getTime()))
+          .sort((a, b) => a.getTime() - b.getTime());
+
+        if (dates.length > 0) {
+          return dates.map((date) => ({
+            date: date,
+            startAm: true,
+            startHour: 9,
+            startMin: 0,
+            endAm: false,
+            endHour: 6,
+            endMin: 0,
+          } as Day));
+        }
+      }
+    } catch (error) {
+      console.error('Failed to parse selected dates:', error);
+    }
+
+    // 날짜가 없으면 기본값 (3일)
+    const start = new Date();
     start.setHours(0, 0, 0, 0);
-    const total = Number.isFinite(daysParam) && daysParam > 0 ? Math.min(daysParam, 30) : 3;
-    return Array.from({ length: total }).map((_, i) => {
+    return Array.from({ length: 3 }).map((_, i) => {
       const d = new Date(start);
       d.setDate(start.getDate() + i);
       return {
         date: d,
-        startAm: false,
-        startHour: 1,
-        startMin: 16,
+        startAm: true,
+        startHour: 9,
+        startMin: 0,
         endAm: false,
-        endHour: 11,
-        endMin: 30,
+        endHour: 6,
+        endMin: 0,
       } as Day;
     });
-  }, [searchParams]);
+  }, []);
+
   const [days, setDays] = React.useState<Day[]>(initialDays);
   return (
     <Page>
