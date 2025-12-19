@@ -4,7 +4,6 @@ import styled from "styled-components";
 import { useMemo, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
 
 const Page = styled.div`
   min-height: 100vh;
@@ -539,17 +538,33 @@ export default function ResultPage() {
   const [selectedPlace, setSelectedPlace] = useState(0);
   const [currentDay, setCurrentDay] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
-  const searchParams = useSearchParams();
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartY, setDragStartY] = useState<number | null>(null);
   const [hoveredDanger, setHoveredDanger] = useState<number | null>(null);
-  // 드래그는 임계값만 체크해 토글
-
+  
+  // sessionStorage에서 선택한 날짜 읽어오기
   const startDate = useMemo(() => {
-    const startParam = searchParams?.get('start');
-    const parsed = startParam ? new Date(startParam) : new Date();
-    return isNaN(parsed.getTime()) ? new Date() : parsed;
-  }, [searchParams]);
+    if (typeof window === 'undefined') {
+      return new Date();
+    }
+    
+    try {
+      const selectedDatesStr = localStorage.getItem('selectedTravelDates');
+      if (selectedDatesStr) {
+        const selectedDates: string[] = JSON.parse(selectedDatesStr);
+        if (selectedDates && selectedDates.length > 0) {
+          const firstDate = new Date(selectedDates[0]);
+          if (!isNaN(firstDate.getTime())) {
+            return firstDate;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse selected dates', e);
+    }
+    
+    return new Date();
+  }, []);
 
   const displayDate = useMemo(() => {
     const date = new Date(startDate);
@@ -565,11 +580,53 @@ export default function ResultPage() {
     return `${month}. ${day} ${weekday}`;
   }, [displayDate]);
 
-  const places = [
-    { name: "서울타워", theme: "관광명소", distance: "0m", time: "11:00", x: "25%", y: "20%" },
-    { name: "명동", theme: "쇼핑", distance: "2.3km", time: "13:30", x: "40%", y: "35%" },
-    { name: "홍대입구", theme: "문화/예술", distance: "1.8km", time: "16:00", x: "55%", y: "70%" }
-  ];
+  // sessionStorage에서 선택한 장소 읽어오기
+  const places = useMemo(() => {
+    if (typeof window === 'undefined') {
+      return [
+        { name: "서울타워", theme: "관광명소", distance: "0m", time: "11:00", x: "25%", y: "20%" },
+        { name: "명동", theme: "쇼핑", distance: "2.3km", time: "13:30", x: "40%", y: "35%" },
+        { name: "홍대입구", theme: "문화/예술", distance: "1.8km", time: "16:00", x: "55%", y: "70%" }
+      ];
+    }
+
+    try {
+      const selectedPlacesStr = sessionStorage.getItem('selectedPlaces');
+      if (selectedPlacesStr) {
+        const selectedPlaces: Array<{ name: string; address: string; latitude?: number; longitude?: number }> = JSON.parse(selectedPlacesStr);
+        if (selectedPlaces && selectedPlaces.length > 0) {
+          // 선택한 장소들을 지도 위치에 맞게 변환 (간단한 예시)
+          return selectedPlaces.map((place, index) => {
+            const positions = [
+              { x: "25%", y: "20%" },
+              { x: "40%", y: "35%" },
+              { x: "55%", y: "70%" },
+              { x: "60%", y: "50%" },
+              { x: "30%", y: "60%" },
+            ];
+            const pos = positions[index] || { x: "50%", y: "50%" };
+            return {
+              name: place.name,
+              theme: "관광명소", // 기본값
+              distance: index === 0 ? "0m" : `${(index * 1.5).toFixed(1)}km`,
+              time: `${9 + index * 2}:${index % 2 === 0 ? "00" : "30"}`,
+              x: pos.x,
+              y: pos.y,
+            };
+          });
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse selected places', e);
+    }
+
+    // 기본값
+    return [
+      { name: "서울타워", theme: "관광명소", distance: "0m", time: "11:00", x: "25%", y: "20%" },
+      { name: "명동", theme: "쇼핑", distance: "2.3km", time: "13:30", x: "40%", y: "35%" },
+      { name: "홍대입구", theme: "문화/예술", distance: "1.8km", time: "16:00", x: "55%", y: "70%" }
+    ];
+  }, []);
 
   const categoryPlaces = [
     { name: "인천공항", x: "20%", y: "15%", icon: "/icons/plane-icon.png" },

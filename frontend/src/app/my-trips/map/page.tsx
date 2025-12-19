@@ -43,6 +43,10 @@ export default function Page() {
   // 도시 중심 좌표 변경 핸들러
   const handleCityCenterChange = useCallback((center: { lat: number; lng: number } | null) => {
     setCityCenter(center);
+    // sessionStorage에 도시 좌표 저장 (optimize/places에서 사용)
+    if (center && typeof window !== 'undefined') {
+      sessionStorage.setItem('cityCenter', JSON.stringify(center));
+    }
   }, []);
 
   const handleSelect = (place: { name: string; address: string; latitude: number; longitude: number }) => {
@@ -81,7 +85,7 @@ export default function Page() {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('selectedPlaces', JSON.stringify(selectedPlaces));
       }
-      router.push('optimize/route');
+      router.push('/optimize/route');
     }
   };
 
