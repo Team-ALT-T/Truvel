@@ -329,7 +329,22 @@ export default function RouteOptimizePage() {
         ))}
       </Content>
       <Footer>
-        <NextButton onClick={() => router.push('/optimize/places')}>다음</NextButton>
+        <NextButton onClick={() => {
+          // 여행 시간 정보를 localStorage에 저장 (Date 객체를 문자열로 변환)
+          if (typeof window !== 'undefined') {
+            const timesToSave = days.map(day => ({
+              date: day.date.toISOString(),
+              startAm: day.startAm,
+              startHour: day.startHour,
+              startMin: day.startMin,
+              endAm: day.endAm,
+              endHour: day.endHour,
+              endMin: day.endMin,
+            }));
+            localStorage.setItem('selectedTravelTimes', JSON.stringify(timesToSave));
+          }
+          router.push('/optimize/places');
+        }}>다음</NextButton>
       </Footer>
     </Page>
   );

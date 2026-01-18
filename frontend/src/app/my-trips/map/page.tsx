@@ -15,9 +15,9 @@ const GoogleMapComponent = dynamic(
 export default function Page() {
   const router = useRouter();
   const [selectedPlaces, setSelectedPlaces] = useState<
-    { name: string; address: string; latitude: number; longitude: number; image?: string }[]
+    { name: string; address: string; latitude: number; longitude: number; image?: string; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null }[]
   >([]);
-  const [currentPin, setCurrentPin] = useState<{ name: string; address: string; latitude: number; longitude: number } | null>(null);
+  const [currentPin, setCurrentPin] = useState<{ name: string; address: string; latitude: number; longitude: number; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [initialCity, setInitialCity] = useState<string | null>(null);
   const [cityCenter, setCityCenter] = useState<{ lat: number; lng: number } | null>(null);
@@ -49,7 +49,7 @@ export default function Page() {
     }
   }, []);
 
-  const handleSelect = (place: { name: string; address: string; latitude: number; longitude: number }) => {
+  const handleSelect = (place: { name: string; address: string; latitude: number; longitude: number; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null }) => {
     const isDuplicate = selectedPlaces.some(
       (p) => p.name === place.name && p.address === place.address
     );
