@@ -6,7 +6,7 @@ import { useSearchPlaces } from '@/lib/hooks/useLocation';
 import { GooglePlaceResult } from '@/lib/api/location';
 
 interface LocationSearchInputProps {
-  onSelect: (place: { name: string; address: string; latitude: number; longitude: number }) => void;
+  onSelect: (place: { name: string; address: string; latitude: number; longitude: number; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null }) => void;
   selectedPlaces?: { name: string; address: string }[];
   onClear?: () => void; 
   onSearchStart?: () => void;
@@ -136,6 +136,10 @@ export default function LocationSearchInput({ onSelect, selectedPlaces = [], onC
         address: place.address,
         latitude: place.latitude,
         longitude: place.longitude,
+        rating: place.rating,
+        reviewCount: place.reviewCount,
+        types: place.types || undefined,
+        photoReference: place.photoReference || undefined,
       });
     }
     

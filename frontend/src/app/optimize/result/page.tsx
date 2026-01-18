@@ -1,9 +1,13 @@
 "use client";
 
 import styled from "styled-components";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import Image from "next/image";
+import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
+import { GooglePlaceResult } from '@/lib/api/location';
+import RouteMapComponent from './components/RouteMapComponent';
 
 const Page = styled.div`
   min-height: 100vh;
@@ -99,20 +103,17 @@ const MapContainer = styled.div`
   flex: 1;
   position: relative;
   overflow: hidden;
-  background-image: url('/icons/EXmap.png');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
+  min-height: 400px;
+  width: 100%;
 `;
 
 const MapContent = styled.div`
-  position: relative;
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   min-height: 400px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
 `;
 
 
@@ -485,7 +486,7 @@ const MenuButton = styled.button`
 `;
 
 /* ExpandToggle 제거 (드래그 제스처로 대체) */
-const ExpandToggle = styled.button<{ expanded: boolean }>`
+const ExpandToggle = styled.button<{ $expanded: boolean }>`
   position: absolute;
   top: 12px;
   right: 12px;
@@ -499,7 +500,7 @@ const ExpandToggle = styled.button<{ expanded: boolean }>`
 
   & .arrow-svg {
     transition: transform 0.2s ease;
-    transform: rotate(${props => (props.expanded ? '90deg' : '0deg')});
+    transform: rotate(${props => (props.$expanded ? '90deg' : '0deg')});
     display: block;
   }
 `;
@@ -526,45 +527,235 @@ const DragHandle = styled.div`
   }
 `;
 
-const ExpandedContent = styled.div<{ expanded: boolean }>`
+const Footer = styled.div`
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding: 15px 12px 20px;
+  border-top: 1px solid #eee;
+  z-index: 10;
+`;
+
+const NextButton = styled.button`
+  width: 100%;
+  height: 56px;
+  background: #6ea8ff;
+  color: #fff;
+  border: 0;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 16px;
+  cursor: pointer;
+
+  &:hover {
+    background: #5a96ff;
+  }
+`;
+
+const ExpandedContent = styled.div<{ $expanded: boolean }>`
   margin-top: 8px;
   overflow: hidden;
-  max-height: ${props => (props.expanded ? '1200px' : '0')};
+  max-height: ${props => (props.$expanded ? '1200px' : '0')};
   transition: max-height 0.25s ease;
 `;
 
 
 export default function ResultPage() {
+  const router = useRouter();
   const [selectedPlace, setSelectedPlace] = useState(0);
   const [currentDay, setCurrentDay] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [dragStartY, setDragStartY] = useState<number | null>(null);
   const [hoveredDanger, setHoveredDanger] = useState<number | null>(null);
+  const [startDate, setStartDate] = useState<Date>(new Date());
+  const [totalDays, setTotalDays] = useState<number>(1);
+  const [travelTimes, setTravelTimes] = useState<Array<{
+    date: string;
+    startAm: boolean;
+    startHour: number;
+    startMin: number;
+    endAm: boolean;
+    endHour: number;
+    endMin: number;
+  }>>([]);
+  const [places, setPlaces] = useState<Array<{
+    name: string;
+    address: string;
+    theme: string;
+    distance: string;
+    time: string;
+    x: string;
+    y: string;
+    latitude?: number;
+    longitude?: number;
+    rating?: number;
+    reviewCount?: number;
+    types?: string[];
+    photoReference?: string;
+    image?: string;
+  }>>([]);
   
-  // sessionStorage에서 선택한 날짜 읽어오기
-  const startDate = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return new Date();
-    }
-    
+  // 클라이언트에서만 localStorage/sessionStorage 읽기 (Hydration 에러 방지)
+  useEffect(() => {
+    // localStorage에서 선택한 날짜 읽어오기
     try {
       const selectedDatesStr = localStorage.getItem('selectedTravelDates');
       if (selectedDatesStr) {
         const selectedDates: string[] = JSON.parse(selectedDatesStr);
         if (selectedDates && selectedDates.length > 0) {
-          const firstDate = new Date(selectedDates[0]);
-          if (!isNaN(firstDate.getTime())) {
-            return firstDate;
+          // 날짜 정렬
+          const sortedDates = selectedDates
+            .map(dateStr => new Date(dateStr))
+            .filter(date => !isNaN(date.getTime()))
+            .sort((a, b) => a.getTime() - b.getTime());
+          
+          if (sortedDates.length > 0) {
+            setStartDate(sortedDates[0]);
+            setTotalDays(sortedDates.length);
           }
         }
       }
     } catch (e) {
       console.error('Failed to parse selected dates', e);
     }
-    
-    return new Date();
+
+    // sessionStorage에서 선택한 장소 읽어오기
+    try {
+      const selectedPlacesStr = sessionStorage.getItem('selectedPlaces');
+      if (selectedPlacesStr) {
+        const selectedPlaces: Array<{ name: string; address: string; latitude?: number; longitude?: number; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null }> = JSON.parse(selectedPlacesStr);
+        if (selectedPlaces && selectedPlaces.length > 0) {
+          // 선택한 장소들을 지도 위치에 맞게 변환 (간단한 예시)
+          const positions = [
+            { x: "25%", y: "20%" },
+            { x: "40%", y: "35%" },
+            { x: "55%", y: "70%" },
+            { x: "60%", y: "50%" },
+            { x: "30%", y: "60%" },
+          ];
+          // travelTimes 읽어오기
+          const travelTimesStr = localStorage.getItem('selectedTravelTimes');
+          let times: Array<{ date: string; startAm: boolean; startHour: number; startMin: number; endAm: boolean; endHour: number; endMin: number }> = [];
+          if (travelTimesStr) {
+            try {
+              times = JSON.parse(travelTimesStr);
+              setTravelTimes(times);
+            } catch (e) {
+              console.error('Failed to parse travel times', e);
+            }
+          }
+
+          // Google Places API types를 한국어로 변환하는 함수
+          const getThemeFromTypes = (types?: string[] | null): string => {
+            if (!types || types.length === 0) return "관광명소";
+            
+            // 우선순위가 높은 타입부터 매핑
+            const typePriorityMap: { [key: string]: string } = {
+              restaurant: "음식점",
+              food: "음식점",
+              cafe: "카페",
+              bar: "바",
+              lodging: "숙박",
+              hotel: "숙박",
+              tourist_attraction: "관광명소",
+              amusement_park: "테마파크",
+              museum: "박물관",
+              park: "공원",
+              shopping_mall: "쇼핑몰",
+              store: "상점",
+              night_club: "나이트클럽",
+            };
+            
+            // 우선순위 순서대로 체크
+            for (const type of types) {
+              if (typePriorityMap[type]) {
+                return typePriorityMap[type];
+              }
+            }
+            
+            // 매핑되지 않은 타입이 있으면 첫 번째 타입을 변환하여 사용
+            return types[0].replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || "관광명소";
+          };
+
+          const formattedPlaces = selectedPlaces.map((place: any, index) => {
+            const pos = positions[index] || { x: "50%", y: "50%" };
+            // types 배열에서 적절한 카테고리를 theme으로 사용
+            const theme = getThemeFromTypes(place.types);
+            
+            // travelTimes에서 첫 번째 날의 시작/종료 시간을 기준으로 시간 계산
+            let timeStr = `${9 + index * 2}:${index % 2 === 0 ? "00" : "30"}`;
+            if (times.length > 0 && times[0]) {
+              const firstDay = times[0];
+              const startHour24 = firstDay.startAm ? firstDay.startHour : (firstDay.startHour === 12 ? 12 : firstDay.startHour + 12);
+              const endHour24 = firstDay.endAm ? firstDay.endHour : (firstDay.endHour === 12 ? 12 : firstDay.endHour + 12);
+              
+              // 시작 시간부터 종료 시간까지 장소 수에 따라 균등 분배
+              const totalMinutes = (endHour24 * 60 + firstDay.endMin) - (startHour24 * 60 + firstDay.startMin);
+              const placeMinutes = Math.floor(totalMinutes / Math.max(selectedPlaces.length, 1)) * index;
+              const visitMinutes = startHour24 * 60 + firstDay.startMin + placeMinutes;
+              const visitHour = Math.floor(visitMinutes / 60) % 24;
+              const visitMin = visitMinutes % 60;
+              
+              const hour12 = visitHour > 12 ? visitHour - 12 : (visitHour === 0 ? 12 : visitHour);
+              const amPm = visitHour >= 12 ? 'PM' : 'AM';
+              timeStr = `${hour12}:${String(visitMin).padStart(2, '0')}`;
+            }
+            
+            // 이전 장소로부터의 거리 계산 (좌표 기반)
+            let distanceStr = "0m";
+            if (index > 0 && place.latitude != null && place.longitude != null) {
+              const prevPlace = selectedPlaces[index - 1];
+              if (prevPlace && prevPlace.latitude != null && prevPlace.longitude != null) {
+                // 하버사인 공식으로 거리 계산 (km)
+                const R = 6371; // 지구 반지름 (km)
+                const dLat = (place.latitude - prevPlace.latitude) * Math.PI / 180;
+                const dLon = (place.longitude - prevPlace.longitude) * Math.PI / 180;
+                const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                  Math.cos(prevPlace.latitude * Math.PI / 180) * Math.cos(place.latitude * Math.PI / 180) *
+                  Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                const distanceKm = R * c;
+                
+                if (distanceKm < 1) {
+                  distanceStr = `${Math.round(distanceKm * 1000)}m`;
+                } else {
+                  distanceStr = `${distanceKm.toFixed(1)}km`;
+                }
+              }
+            }
+            
+            return {
+              name: place.name,
+              address: place.address || "",
+              theme: theme,
+              distance: distanceStr,
+              time: timeStr,
+              x: pos.x,
+              y: pos.y,
+              latitude: place.latitude,
+              longitude: place.longitude,
+              rating: place.rating,
+              reviewCount: place.reviewCount,
+              types: place.types,
+              photoReference: place.photoReference,
+              image: place.image || place.photoReference,
+            };
+          });
+          setPlaces(formattedPlaces);
+        }
+      }
+    } catch (e) {
+      console.error('Failed to parse selected places', e);
+    }
   }, []);
+
+  // 현재 일수가 최대 일수를 넘으면 1로 초기화
+  useEffect(() => {
+    if (totalDays > 0 && currentDay > totalDays) {
+      setCurrentDay(1);
+    }
+  }, [totalDays, currentDay]);
 
   const displayDate = useMemo(() => {
     const date = new Date(startDate);
@@ -580,53 +771,6 @@ export default function ResultPage() {
     return `${month}. ${day} ${weekday}`;
   }, [displayDate]);
 
-  // sessionStorage에서 선택한 장소 읽어오기
-  const places = useMemo(() => {
-    if (typeof window === 'undefined') {
-      return [
-        { name: "서울타워", theme: "관광명소", distance: "0m", time: "11:00", x: "25%", y: "20%" },
-        { name: "명동", theme: "쇼핑", distance: "2.3km", time: "13:30", x: "40%", y: "35%" },
-        { name: "홍대입구", theme: "문화/예술", distance: "1.8km", time: "16:00", x: "55%", y: "70%" }
-      ];
-    }
-
-    try {
-      const selectedPlacesStr = sessionStorage.getItem('selectedPlaces');
-      if (selectedPlacesStr) {
-        const selectedPlaces: Array<{ name: string; address: string; latitude?: number; longitude?: number }> = JSON.parse(selectedPlacesStr);
-        if (selectedPlaces && selectedPlaces.length > 0) {
-          // 선택한 장소들을 지도 위치에 맞게 변환 (간단한 예시)
-          return selectedPlaces.map((place, index) => {
-            const positions = [
-              { x: "25%", y: "20%" },
-              { x: "40%", y: "35%" },
-              { x: "55%", y: "70%" },
-              { x: "60%", y: "50%" },
-              { x: "30%", y: "60%" },
-            ];
-            const pos = positions[index] || { x: "50%", y: "50%" };
-            return {
-              name: place.name,
-              theme: "관광명소", // 기본값
-              distance: index === 0 ? "0m" : `${(index * 1.5).toFixed(1)}km`,
-              time: `${9 + index * 2}:${index % 2 === 0 ? "00" : "30"}`,
-              x: pos.x,
-              y: pos.y,
-            };
-          });
-        }
-      }
-    } catch (e) {
-      console.error('Failed to parse selected places', e);
-    }
-
-    // 기본값
-    return [
-      { name: "서울타워", theme: "관광명소", distance: "0m", time: "11:00", x: "25%", y: "20%" },
-      { name: "명동", theme: "쇼핑", distance: "2.3km", time: "13:30", x: "40%", y: "35%" },
-      { name: "홍대입구", theme: "문화/예술", distance: "1.8km", time: "16:00", x: "55%", y: "70%" }
-    ];
-  }, []);
 
   const categoryPlaces = [
     { name: "인천공항", x: "20%", y: "15%", icon: "/icons/plane-icon.png" },
@@ -651,7 +795,9 @@ export default function ResultPage() {
   };
 
   const handleNextDay = () => {
-    setCurrentDay(currentDay + 1);
+    if (currentDay < totalDays) {
+      setCurrentDay(currentDay + 1);
+    }
   };
 
   // 토글 버튼 없이 드래그로만 제어
@@ -707,168 +853,117 @@ export default function ResultPage() {
       
       <MapContainer>
         <MapContent>
-          {/* SVG 경로 선 - 비행기 → 1번 → 2번 → 3번 → 식당 → 호텔 순으로 연결 */}
-          <svg 
-            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-          >
-            <path
-              d={`M ${parseFloat(categoryPlaces[0].x.replace('%', ''))} ${parseFloat(categoryPlaces[0].y.replace('%', ''))} L ${parseFloat(places[0].x.replace('%', ''))} ${parseFloat(places[0].y.replace('%', ''))} L ${parseFloat(places[1].x.replace('%', ''))} ${parseFloat(places[1].y.replace('%', ''))} L ${parseFloat(places[2].x.replace('%', ''))} ${parseFloat(places[2].y.replace('%', ''))} L ${parseFloat(categoryPlaces[1].x.replace('%', ''))} ${parseFloat(categoryPlaces[1].y.replace('%', ''))} L ${parseFloat(categoryPlaces[2].x.replace('%', ''))} ${parseFloat(categoryPlaces[2].y.replace('%', ''))}`}
-              stroke="#777777"
-              strokeWidth="0.5"
-              strokeDasharray="1,1"
-              fill="none"
-            />
-          </svg>
-
-          {/* 숫자 장소들 (1, 2, 3) - 클릭 가능 */}
-          {places.map((place, index) => (
-            <RoutePoint 
-              key={index}
-              top={place.y} 
-              left={place.x} 
-              onClick={() => handlePlaceClick(index)}
-            >
-              {index + 1}
-            </RoutePoint>
-          ))}
-
-          {/* 아이콘 장소들 (비행기, 식당, 호텔) - 클릭 불가 */}
-          {categoryPlaces.map((place, index) => (
-            <div
-              key={`category-${index}`}
-              style={{
-                position: 'absolute',
-                top: place.y,
-                left: place.x,
-                transform: 'translate(-50%, -50%)',
-                pointerEvents: 'none'
-              }}
-            >
-              <Image src={place.icon} alt={place.name} width={24} height={24} />
-            </div>
-          ))}
-
-          {/* 위험도 마커들 */}
-          {dangerPlaces.map((place, index) => (
-            <div 
-              key={`danger-${index}`} 
-              style={{ 
-                position: 'absolute',
-                top: place.y,
-                left: place.x,
-                transform: 'translate(-50%, -50%)',
-                zIndex: 10,
-                width: '70px',
-                height: '70px',
-                pointerEvents: 'auto'
-              }}
-              onMouseEnter={() => setHoveredDanger(index)}
-              onMouseLeave={() => setHoveredDanger(null)}
-            >
-              <DangerMarker>
-                <Image src="/icons/danger.png" alt="위험" width={24} height={24} />
-              </DangerMarker>
-              {hoveredDanger === index && (
-                <Tooltip 
-                  visible={true}
-                  isLeft={parseFloat(place.x) > 70}
-                  style={{
-                    // 화면 오른쪽 끝에 가까우면 더 왼쪽으로 이동 (여전히 아래 위치 유지)
-                    left: parseFloat(place.x) > 70 ? '20%' : '50%',
-                    transform: 'translateX(-50%)',
-                  }}
-                >
-                  {place.message}
-                </Tooltip>
-              )}
-            </div>
-          ))}
-
+          {/* Google Maps - 실제 장소들을 마커와 점선으로 표시 */}
+          <RouteMapComponent
+            places={places}
+            selectedPlaceIndex={selectedPlace}
+            onPlaceClick={handlePlaceClick}
+            initialCityName={null}
+          />
          </MapContent>
          
          {/* 하단 정보 패널 */}
          <BottomPanel onPointerDown={onPanelPointerDown} onPointerMove={onPanelPointerMove} onPointerUp={onPanelPointerUp}>
            <DragHandle />
            {!isExpanded && (
-             <ExpandToggle expanded={isExpanded} onClick={() => setIsExpanded(true)} aria-label="펼치기">
+             <ExpandToggle 
+               $expanded={isExpanded} 
+               onClick={() => {
+                 // 장소 이름과 주소로 Google Maps 검색 URL 생성
+                 const place = places[selectedPlace];
+                 if (place && place.name) {
+                   const query = encodeURIComponent(`${place.name} ${place.address}`);
+                   const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${query}`;
+                   window.open(googleMapsUrl, '_blank');
+                 }
+               }} 
+               aria-label="구글맵에서 보기"
+             >
                <svg className="arrow-svg" width="28" height="18" viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                  <path d="M2 9 H22" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round"/>
                  <path d="M18 5 L22 9 L18 13" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                </svg>
              </ExpandToggle>
            )}
-           <CurrentStop>
-             <StopNumber>{selectedPlace + 1}</StopNumber>
-             <StopTime>{places[selectedPlace].time}</StopTime>
-           </CurrentStop>
-           <PlaceInfo>
-             <PlaceImage>이미지</PlaceImage>
-             <PlaceDetails>
-               <PlaceTitle>{places[selectedPlace].name}</PlaceTitle>
-               <PlaceTheme>테마 ({places[selectedPlace].theme})</PlaceTheme>
-               <PlaceDistance>
-                여기서부터 <span className="value">{places[selectedPlace].distance}</span>
-              </PlaceDistance>
-            </PlaceDetails>
-            <MenuButton></MenuButton>
-          </PlaceInfo>
-          <ExpandedContent expanded={isExpanded}>
-            <Section>
-              <Row>
-                <RowIcon><ClockIcon /></RowIcon>
-                <div>
-                  <RowTextStrong>오늘 {places[selectedPlace].time} 방문 예정</RowTextStrong>
+           {places.length > 0 && places[selectedPlace] && (
+             <>
+               <CurrentStop>
+                 <StopNumber>{selectedPlace + 1}</StopNumber>
+                 <StopTime>{places[selectedPlace].time}</StopTime>
+               </CurrentStop>
+               <PlaceInfo>
+                 <PlaceImage>이미지</PlaceImage>
+                 <PlaceDetails>
+                   <PlaceTitle>{places[selectedPlace].name}</PlaceTitle>
+                   <PlaceTheme>테마 ({places[selectedPlace].theme})</PlaceTheme>
+                   <PlaceDistance>
+                    여기서부터 <span className="value">{places[selectedPlace].distance}</span>
+                  </PlaceDistance>
+                </PlaceDetails>
+                <MenuButton></MenuButton>
+              </PlaceInfo>
+              <ExpandedContent $expanded={isExpanded}>
+                <Section>
+                  <Row>
+                    <RowIcon><ClockIcon /></RowIcon>
+                    <div>
+                      <RowTextStrong>오늘 {places[selectedPlace].time} 방문 예정</RowTextStrong>
                  
                 </div>
               </Row>
               <Row>
                 <RowIcon><PinIcon /></RowIcon>
                 <div>
-                  <RowText>장소의 상세 주소 입력칸</RowText>
+                  <RowText>{places[selectedPlace].address || "주소 정보 없음"}</RowText>
                  
                 </div>
               </Row>
               <Row>
                 <RowIcon><PhoneIcon /></RowIcon>
                 <div>
-                  <RowText>+82 02-000-0000</RowText>
-                  
-                </div>
-              </Row>
-              <Row>
-                <RowIcon><UsersIcon /></RowIcon>
-                <div>
-                  <RowText>10:00 조금 붐비는 시간대</RowText>
+                  <RowText>전화번호 정보 없음</RowText>
                   
                 </div>
               </Row>
             </Section>
             <ReviewsSection>
               <ReviewsHeader>
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                  4.8 (1,228) <StarIcon />
-                </span>
+                {places[selectedPlace].rating && places[selectedPlace].reviewCount ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    {places[selectedPlace].rating.toFixed(1)} ({places[selectedPlace].reviewCount.toLocaleString()}) <StarIcon />
+                  </span>
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                    - (리뷰 정보 없음) <StarIcon />
+                  </span>
+                )}
                 <GoogleNote>리뷰는 Google Map에서 제공됩니다</GoogleNote>
               </ReviewsHeader>
               <ReviewCards>
-                <ReviewCard>
-                  <ReviewRating>
-                    <span>4.5</span>
-                    <StarIcon />
-                  </ReviewRating>
-                  <ReviewText>리뷰 내용은 최대 두 줄만 보이도록</ReviewText>
-                </ReviewCard>
-                <ReviewCard>
-                  <ReviewRating>
-                    <span>4.5</span>
-                    <StarIcon />
-                  </ReviewRating>
-                  <ReviewText>리뷰 내용은 최대 두 줄만 보이도록</ReviewText>
-                </ReviewCard>
+                {places[selectedPlace].rating && places[selectedPlace].reviewCount ? (
+                  <ReviewCard>
+                    <ReviewRating>
+                      <span>{places[selectedPlace].rating?.toFixed(1) || '0.0'}</span>
+                      <StarIcon />
+                    </ReviewRating>
+                    <ReviewText>{places[selectedPlace].reviewCount?.toLocaleString() || 0}개의 리뷰가 있습니다</ReviewText>
+                  </ReviewCard>
+                ) : (
+                  <ReviewCard>
+                    <ReviewRating>
+                      <span>-</span>
+                      <StarIcon />
+                    </ReviewRating>
+                    <ReviewText>리뷰 정보 없음</ReviewText>
+                  </ReviewCard>
+                )}
                 <MoreCard>
-                  <CircleButton aria-label="더 보기">
+                  <CircleButton 
+                    aria-label="더 보기"
+                    onClick={() => {
+                      setIsExpanded(!isExpanded);
+                    }}
+                  >
                     <ArrowRightIcon />
                   </CircleButton>
                   <MoreLabel>더 보기</MoreLabel>
@@ -876,8 +971,15 @@ export default function ResultPage() {
               </ReviewCards>
             </ReviewsSection>
           </ExpandedContent>
+             </>
+           )}
         </BottomPanel>
       </MapContainer>
+      <Footer>
+        <NextButton onClick={() => {
+          router.push('/optimize/check-result');
+        }}>다음</NextButton>
+      </Footer>
     </Page>
   );
 }

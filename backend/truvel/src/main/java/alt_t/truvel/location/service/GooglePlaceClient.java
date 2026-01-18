@@ -64,13 +64,25 @@ public class GooglePlaceClient {
             GooglePlaceTextSearchResponseDto body = response.getBody();
             System.out.println("[GooglePlaceClient] 응답 body: " + body);
 
-            if (body == null || !"OK".equals(body.getStatus())) {
+            if (body == null) {
+                System.out.println("[GooglePlaceClient] 응답 body가 null입니다");
+                throw new CustomException(ErrorCode.GOOGLE_API_ERROR);
+            }
+            
+            // ZERO_RESULTS는 정상 응답 (검색 결과 없음)
+            if ("ZERO_RESULTS".equals(body.getStatus())) {
+                System.out.println("[GooglePlaceClient] 검색 결과 없음 (ZERO_RESULTS)");
+                return List.of(); // 빈 리스트 반환
+            }
+            
+            if (!"OK".equals(body.getStatus())) {
+                System.out.println("[GooglePlaceClient] Google API 응답 상태가 OK가 아닙니다. status: " + body.getStatus());
                 throw new CustomException(ErrorCode.GOOGLE_API_ERROR);
             }
 
             if (body.getResults() == null || body.getResults().isEmpty()) {
                 System.out.println("[GooglePlaceClient] 결과 없음 (results가 비어있음)");
-                throw new CustomException(ErrorCode.PLACE_NOT_FOUND);
+                return List.of(); // 빈 리스트 반환 (에러 아님)
             }
 
             return body.getResults().stream().map(r -> {

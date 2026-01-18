@@ -16,12 +16,13 @@ const GoogleMapComponent = dynamic(
 export default function PlacesPage() {
   const router = useRouter();
   const [selectedPlaces, setSelectedPlaces] = useState<
-    { name: string; address: string; latitude?: number; longitude?: number; image?: string }[]
+    { name: string; address: string; latitude?: number; longitude?: number; image?: string; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null }[]
   >([]);
-  const [currentPin, setCurrentPin] = useState<{ name: string; address: string; latitude?: number; longitude?: number } | null>(null);
+  const [currentPin, setCurrentPin] = useState<{ name: string; address: string; latitude?: number; longitude?: number; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null } | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [cityCenter, setCityCenter] = useState<{ lat: number; lng: number } | null>(null);
+  const [initialCityName, setInitialCityName] = useState<string | null>(null);
 
   // sessionStorage에서 선택한 장소 읽어오기
   useEffect(() => {
@@ -54,21 +55,36 @@ export default function PlacesPage() {
             const cities = JSON.parse(selectedCitiesStr);
             if (cities && cities.length > 0) {
               const cityName = cities[0].name;
-              // Google Maps API가 로드되어 있으면 Geocoding 시도
-              if (typeof window !== 'undefined' && (window as any).google) {
-                const geocoder = new (window as any).google.maps.Geocoder();
-                geocoder.geocode({ address: cityName }, (results: any, status: string) => {
-                  if (status === 'OK' && results && results[0]) {
-                    const location = results[0].geometry.location;
-                    const center = {
-                      lat: location.lat(),
-                      lng: location.lng(),
-                    };
-                    setCityCenter(center);
-                    sessionStorage.setItem('cityCenter', JSON.stringify(center));
+              // Google Maps API가 로드될 때까지 기다린 후 Geocoding 시도
+              let retryCount = 0;
+              const maxRetries = 50; // 최대 5초 (50 * 100ms)
+              const checkGoogleMaps = () => {
+                if (typeof window !== 'undefined' && (window as any).google && (window as any).google.maps) {
+                  try {
+                    const geocoder = new (window as any).google.maps.Geocoder();
+                    geocoder.geocode({ address: cityName }, (results: any, status: string) => {
+                      if (status === 'OK' && results && results[0]) {
+                        const location = results[0].geometry.location;
+                        const center = {
+                          lat: location.lat(),
+                          lng: location.lng(),
+                        };
+                        setCityCenter(center);
+                        sessionStorage.setItem('cityCenter', JSON.stringify(center));
+                      }
+                    });
+                  } catch (e) {
+                    console.error('Geocoding error:', e);
                   }
-                });
-              }
+                } else if (retryCount < maxRetries) {
+                  // Google Maps API가 아직 로드되지 않았으면 100ms 후 다시 시도
+                  retryCount++;
+                  setTimeout(checkGoogleMaps, 100);
+                } else {
+                  console.warn('Google Maps API 로드 시간 초과');
+                }
+              };
+              checkGoogleMaps();
             }
           } catch (e) {
             console.error('Failed to parse selected cities', e);
@@ -78,7 +94,7 @@ export default function PlacesPage() {
     }
   }, []);
 
-  const handleSelect = (place: { name: string; address: string; latitude: number; longitude: number }) => {
+  const handleSelect = (place: { name: string; address: string; latitude: number; longitude: number; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null }) => {
     const isDuplicate = selectedPlaces.some(
       (p) => p.name === place.name && p.address === place.address
     );
@@ -150,13 +166,7 @@ export default function PlacesPage() {
     setIsSearching(true);
   };
 
-  if (isLoading) {
-    return <Loading />;
-  }
-
   // sessionStorage에서 도시 이름 가져오기 (지도 초기 중심 설정용)
-  const [initialCityName, setInitialCityName] = useState<string | null>(null);
-  
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const selectedCitiesStr = sessionStorage.getItem('selectedCities');
@@ -172,6 +182,10 @@ export default function PlacesPage() {
       }
     }
   }, []);
+
+  if (isLoading) {
+    return <Loading />;
+  }
 
   return (
     <PageContainer>
