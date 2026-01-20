@@ -1,9 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import styled from "styled-components";
+import dynamic from 'next/dynamic';
+import RouteMapComponent from '../result/components/RouteMapComponent';
+import { createTravelPlan, createDaySchedule, type TravelPlanRequest, type DayScheduleRequest, type ScheduleRequest } from '@/lib/api/travel';
+import { saveLocations, type LocationSaveRequest } from '@/lib/api/location';
+import { useQueryClient } from '@tanstack/react-query';
 
 // TypeScript 인터페이스 정의
 interface Activity {
@@ -14,6 +19,7 @@ interface Activity {
   color: string;
   number?: number;
   iconType?: "restaurant" | "hotel";
+  dayIndex?: number; // 장소가 속한 날짜 인덱스
 }
 
 interface DayPlan {
@@ -38,91 +44,212 @@ interface HoverIconProps {
 
 const TravelItineraryApp: React.FC = () => {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
   const [travelData, setTravelData] = useState<TravelData>({
-    title: "샌프란시스코 여행",
-    dates: "2025. 05. 12-05. 16",
-    days: [
-      {
-        date: "05. 12월",
-        dayNumber: 1,
-        items: [
-          {
-            id: "1",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#3CA6FF",
-            number: 1,
-          },
-          {
-            id: "2",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#3CA6FF",
-            number: 2,
-          },
-          {
-            id: "3",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#8B5A96",
-            iconType: "hotel",
-          },
-        ],
-      },
-      {
-        date: "05. 13화",
-        dayNumber: 2,
-        items: [
-          {
-            id: "4",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#E67E22",
-            iconType: "hotel",
-          },
-          {
-            id: "5",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#3CA6FF",
-            number: 1,
-          },
-          {
-            id: "6",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#3CA6FF",
-            number: 2,
-          },
-          {
-            id: "7",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#8B5A96",
-            iconType: "restaurant",
-          },
-          {
-            id: "8",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#3CA6FF",
-            number: 3,
-          },
-        ],
-      },
-    ],
+    title: "",
+    dates: "",
+    days: [],
   });
+  const [allPlaces, setAllPlaces] = useState<Array<{
+    name: string;
+    address: string;
+    latitude?: number;
+    longitude?: number;
+  }>>([]);
+  const [initialCityName, setInitialCityName] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [cityId, setCityId] = useState<number | null>(null);
+  const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const [selectedPlaces, setSelectedPlaces] = useState<Array<{
+    name: string;
+    address: string;
+    latitude?: number;
+    longitude?: number;
+    rating?: number;
+    reviewCount?: number;
+    types?: string[] | null;
+    photoReference?: string | null;
+  }>>([]);
+  const [travelTimes, setTravelTimes] = useState<Array<{
+    date: string;
+    startAm: boolean;
+    startHour: number;
+    startMin: number;
+    endAm: boolean;
+    endHour: number;
+    endMin: number;
+  }>>([]);
+
+  // Google Places API types를 한국어로 변환하는 함수
+  const getThemeFromTypes = (types?: string[] | null): string => {
+    if (!types || types.length === 0) return "관광명소";
+    
+    const typePriorityMap: { [key: string]: string } = {
+      restaurant: "음식점",
+      food: "음식점",
+      cafe: "카페",
+      bar: "바",
+      lodging: "숙박",
+      hotel: "숙박",
+      tourist_attraction: "관광명소",
+      amusement_park: "테마파크",
+      museum: "박물관",
+      park: "공원",
+      shopping_mall: "쇼핑몰",
+      store: "상점",
+      night_club: "나이트클럽",
+    };
+    
+    for (const type of types) {
+      if (typePriorityMap[type]) {
+        return typePriorityMap[type];
+      }
+    }
+    
+    return types[0].replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || "관광명소";
+  };
+
+  // localStorage/sessionStorage에서 데이터 읽어오기
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    try {
+      // 선택한 날짜 읽어오기
+      const selectedDatesStr = localStorage.getItem('selectedTravelDates');
+      const selectedPlacesStr = sessionStorage.getItem('selectedPlaces');
+      
+      if (!selectedDatesStr || !selectedPlacesStr) {
+        console.warn('Missing travel data');
+        return;
+      }
+
+      const selectedDates: string[] = JSON.parse(selectedDatesStr);
+      const selectedPlaces: Array<{
+        name: string;
+        address: string;
+        latitude?: number;
+        longitude?: number;
+        rating?: number;
+        reviewCount?: number;
+        types?: string[] | null;
+        photoReference?: string | null;
+      }> = JSON.parse(selectedPlacesStr);
+
+      if (!selectedDates || selectedDates.length === 0 || !selectedPlaces || selectedPlaces.length === 0) {
+        return;
+      }
+
+      // 날짜 정렬
+      const sortedDates = selectedDates
+        .map(dateStr => new Date(dateStr))
+        .filter(date => !isNaN(date.getTime()))
+        .sort((a, b) => a.getTime() - b.getTime());
+
+      if (sortedDates.length === 0) return;
+
+      // 여행 제목 생성 (첫 번째 도시 이름 사용)
+      const selectedCitiesStr = sessionStorage.getItem('selectedCities');
+      let title = "여행";
+      if (selectedCitiesStr) {
+        try {
+          const cities = JSON.parse(selectedCitiesStr);
+          if (cities && cities.length > 0) {
+            title = `${cities[0].name} 여행`;
+            setInitialCityName(cities[0].name);
+            setCityId(cities[0].cityId);
+          }
+        } catch (e) {
+          console.error('Failed to parse selected cities', e);
+        }
+      }
+
+      // travelTimes 읽어오기
+      const travelTimesStr = localStorage.getItem('selectedTravelTimes');
+      if (travelTimesStr) {
+        try {
+          const times = JSON.parse(travelTimesStr);
+          setTravelTimes(times);
+        } catch (e) {
+          console.error('Failed to parse travel times', e);
+        }
+      }
+
+      // state에 저장
+      setSelectedDates(sortedDates);
+      setSelectedPlaces(selectedPlaces);
+
+      // 지도에 표시할 모든 장소 저장
+      setAllPlaces(selectedPlaces.map(place => ({
+        name: place.name,
+        address: place.address,
+        latitude: place.latitude,
+        longitude: place.longitude,
+      })));
+
+      // 날짜 범위 문자열 생성
+      const startDate = sortedDates[0];
+      const endDate = sortedDates[sortedDates.length - 1];
+      const formatDate = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}. ${month}. ${day}`;
+      };
+      const datesStr = sortedDates.length === 1 
+        ? formatDate(startDate)
+        : `${formatDate(startDate)}-${formatDate(endDate).split('. ').slice(1).join('. ')}`;
+
+      // 장소들을 날짜별로 균등 분배
+      const placesPerDay = Math.ceil(selectedPlaces.length / sortedDates.length);
+      const days: DayPlan[] = sortedDates.map((date, dayIndex) => {
+        const startIdx = dayIndex * placesPerDay;
+        const endIdx = Math.min(startIdx + placesPerDay, selectedPlaces.length);
+        const dayPlaces = selectedPlaces.slice(startIdx, endIdx);
+
+        // 날짜 포맷팅
+        const days = ["일", "월", "화", "수", "목", "금", "토"];
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const weekday = days[date.getDay()];
+        const dateStr = `${month}. ${day}${weekday}`;
+
+        // 장소들을 Activity로 변환
+        const items: Activity[] = dayPlaces.map((place, placeIndex) => {
+          const theme = getThemeFromTypes(place.types);
+          const isRestaurant = place.types?.some(t => t === 'restaurant' || t === 'food' || t === 'cafe');
+          const isHotel = place.types?.some(t => t === 'lodging' || t === 'hotel');
+
+          return {
+            id: `day-${dayIndex}-place-${placeIndex}`,
+            title: place.name,
+            details: theme,
+            type: "activity",
+            color: "#3CA6FF",
+            number: placeIndex + 1,
+            iconType: isRestaurant ? "restaurant" : isHotel ? "hotel" : undefined,
+            dayIndex: dayIndex,
+          };
+        });
+
+        return {
+          date: dateStr,
+          dayNumber: dayIndex + 1,
+          items: items,
+        };
+      });
+
+      setTravelData({
+        title: title,
+        dates: datesStr,
+        days: days,
+      });
+    } catch (e) {
+      console.error('Failed to parse travel data', e);
+    }
+  }, []);
 
 
   const handleCancel = () => {
@@ -145,6 +272,9 @@ const TravelItineraryApp: React.FC = () => {
   const handleComplete = () => {
     setIsEditMode(false);
     setSelectedItems([]);
+    
+    // 수정된 데이터를 sessionStorage에 저장 (필요한 경우)
+    // 현재는 state에만 저장하고 있지만, 필요시 여기서 저장할 수 있습니다
   };
 
   const handleSelectItem = (itemId: string) => {
@@ -184,16 +314,20 @@ const TravelItineraryApp: React.FC = () => {
 
   const handleDrop = (e: React.DragEvent, targetDayIndex: number) => {
     e.preventDefault();
+    e.stopPropagation();
     const draggedItemId = e.dataTransfer.getData("text/plain");
+    
+    if (!draggedItemId) return;
     
     // 소스 날짜 찾기
     const sourceDayIndex = travelData.days.findIndex(day => 
       day.items.some(item => item.id === draggedItemId)
     );
     
-    // 같은 날짜 내에서는 순서만 변경
+    if (sourceDayIndex === -1) return;
+
+    // 같은 날짜 내에서는 순서만 변경 (현재는 무시)
     if (sourceDayIndex === targetDayIndex) {
-      // 같은 날짜 내에서의 순서 변경 로직 (추후 구현 가능)
       return;
     }
 
@@ -210,15 +344,190 @@ const TravelItineraryApp: React.FC = () => {
       // 소스에서 제거
       sourceDay.items = sourceDay.items.filter(item => item.id !== draggedItemId);
       
-      // 타겟에 추가
-      targetDay.items.push(draggedItem);
+      // 타겟에 추가하고 dayIndex 업데이트
+      const updatedItem = { ...draggedItem, dayIndex: targetDayIndex };
+      targetDay.items.push(updatedItem);
+      
+      // 타겟 날짜의 모든 아이템에 number 재할당
+      targetDay.items.forEach((item, index) => {
+        item.number = index + 1;
+      });
+      
+      // 소스 날짜의 모든 아이템에 number 재할당
+      sourceDay.items.forEach((item, index) => {
+        item.number = index + 1;
+      });
       
       return newData;
     });
   };
 
-  const handleRegisterSchedule = () => {
-    router.push('/my-trips');
+  const handleRegisterSchedule = async () => {
+    if (!cityId || selectedDates.length === 0 || travelData.days.length === 0) {
+      alert('여행 정보가 불완전합니다. 다시 확인해주세요.');
+      return;
+    }
+
+    setIsRegistering(true);
+
+    try {
+      // 1. 여행 계획 생성
+      const startDate = selectedDates[0];
+      const endDate = selectedDates[selectedDates.length - 1];
+      
+      const formatDateForAPI = (date: Date): string => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const travelPlanRequest: TravelPlanRequest = {
+        cityId: cityId,
+        startDate: formatDateForAPI(startDate),
+        endDate: formatDateForAPI(endDate),
+      };
+
+      const travelPlanResponse = await createTravelPlan(travelPlanRequest);
+      const travelPlanId = travelPlanResponse.travelPlanId;
+
+      // 2. 모든 장소를 Location으로 저장 (중복 제거)
+      const uniquePlaceNames = new Set<string>();
+      const locationRequests: LocationSaveRequest[] = [];
+      
+      // travelData.days에서 실제 사용되는 모든 장소 수집
+      for (const day of travelData.days) {
+        for (const item of day.items) {
+          if (!uniquePlaceNames.has(item.title)) {
+            uniquePlaceNames.add(item.title);
+            // selectedPlaces에서 해당 장소 찾기
+            const place = selectedPlaces.find(p => p.name === item.title);
+            if (place) {
+              // PlaceCategory 결정 (types 기반)
+              let category: 'DEFAULT' | 'CAFE' | 'RESTAURANT' | 'ATTRACTION' = 'DEFAULT';
+              if (place.types) {
+                if (place.types.some(t => t === 'restaurant' || t === 'food')) {
+                  category = 'RESTAURANT';
+                } else if (place.types.some(t => t === 'cafe')) {
+                  category = 'CAFE';
+                } else if (place.types.some(t => t === 'tourist_attraction' || t === 'amusement_park' || t === 'museum' || t === 'park')) {
+                  category = 'ATTRACTION';
+                }
+              }
+
+              locationRequests.push({
+                name: place.name,
+                latitude: place.latitude || 0,
+                longitude: place.longitude || 0,
+                address: place.address || '',
+                category: category,
+              });
+            }
+          }
+        }
+      }
+
+      if (locationRequests.length > 0) {
+        await saveLocations(locationRequests);
+      }
+
+      // 3. 각 날짜별로 일정 생성
+      const createdDaySchedules: number[] = [];
+      try {
+        for (let dayIndex = 0; dayIndex < travelData.days.length; dayIndex++) {
+          const day = travelData.days[dayIndex];
+          if (day.items.length === 0) continue;
+
+          const dayDate = selectedDates[dayIndex];
+          const dayTime = travelTimes[dayIndex] || travelTimes[0] || {
+            startAm: true,
+            startHour: 9,
+            startMin: 0,
+            endAm: false,
+            endHour: 6,
+            endMin: 0,
+          };
+
+          // 시간 변환 (12시간 -> 24시간)
+          const startHour24 = dayTime.startAm 
+            ? (dayTime.startHour === 12 ? 0 : dayTime.startHour)
+            : (dayTime.startHour === 12 ? 12 : dayTime.startHour + 12);
+          const endHour24 = dayTime.endAm
+            ? (dayTime.endHour === 12 ? 0 : dayTime.endHour)
+            : (dayTime.endHour === 12 ? 12 : dayTime.endHour + 12);
+
+          const startTime = `${String(startHour24).padStart(2, '0')}:${String(dayTime.startMin).padStart(2, '0')}:00`;
+          const finishTime = `${String(endHour24).padStart(2, '0')}:${String(dayTime.endMin).padStart(2, '0')}:00`;
+
+          // 장소들을 ScheduleRequest로 변환
+          const schedules: ScheduleRequest[] = day.items.map((item, index) => {
+            // PreferTime 결정 (시간대별) - 백엔드 enum 형식에 맞춤: Morning, Afternoon, Evening, Random
+            let preferTime: 'Morning' | 'Afternoon' | 'Evening' | 'Random' = 'Afternoon';
+            const totalMinutes = (endHour24 * 60 + dayTime.endMin) - (startHour24 * 60 + dayTime.startMin);
+            const placeMinutes = Math.floor(totalMinutes / day.items.length) * index;
+            const visitHour = Math.floor((startHour24 * 60 + dayTime.startMin + placeMinutes) / 60) % 24;
+            
+            if (visitHour >= 5 && visitHour < 12) {
+              preferTime = 'Morning';
+            } else if (visitHour >= 12 && visitHour < 17) {
+              preferTime = 'Afternoon';
+            } else if (visitHour >= 17 && visitHour < 22) {
+              preferTime = 'Evening';
+            } else {
+              // NIGHT는 백엔드에 없으므로 Evening으로 처리
+              preferTime = 'Evening';
+            }
+
+            return {
+              locationName: item.title,
+              scheduleOrder: index + 1,
+              preferTime: preferTime,
+              memo: item.details,
+              stayTime: 'PT1H', // 기본 1시간
+            };
+          });
+
+          const dayScheduleRequest: DayScheduleRequest = {
+            date: formatDateForAPI(dayDate),
+            startTime: startTime,
+            finishTime: finishTime,
+            dayScheduleMemo: `Day ${day.dayNumber}`,
+            schedules: schedules,
+          };
+
+          console.log(`Creating day schedule for Day ${day.dayNumber}:`, dayScheduleRequest);
+          await createDaySchedule(travelPlanId, dayScheduleRequest);
+          createdDaySchedules.push(dayIndex);
+        }
+
+        // 4. 여행 목록 새로고침
+        queryClient.invalidateQueries({ queryKey: ['travelPlans'] });
+
+        // 5. 성공 메시지 및 페이지 이동
+        alert('여행 일정이 등록되었습니다!');
+        router.push('/my-trips');
+      } catch (scheduleError: any) {
+        // 일정 생성 실패 시 상세 에러 로그
+        console.error('Failed to create day schedule:', scheduleError);
+        console.error('Request data:', scheduleError.config?.data);
+        console.error('Response:', scheduleError.response?.data);
+        
+        const errorMessage = scheduleError.response?.data?.message || scheduleError.message || '알 수 없는 오류';
+        const errorDetails = scheduleError.response?.data || {};
+        
+        alert(`일정 생성에 실패했습니다.\n\n에러: ${errorMessage}\n\n여행 계획은 생성되었지만 일정이 저장되지 않았습니다. 다시 시도해주세요.`);
+        
+        // 여행 목록은 새로고침 (부분 성공 상태)
+        queryClient.invalidateQueries({ queryKey: ['travelPlans'] });
+        throw scheduleError; // 상위 catch로 전달
+      }
+    } catch (error: any) {
+      console.error('Failed to register travel plan:', error);
+      const errorMessage = error.response?.data?.message || error.message || '알 수 없는 오류';
+      alert(`여행 일정 등록에 실패했습니다: ${errorMessage}`);
+    } finally {
+      setIsRegistering(false);
+    }
   };
 
   return (
@@ -235,67 +544,75 @@ const TravelItineraryApp: React.FC = () => {
 
       <DateText>{travelData.dates}</DateText>
 
-<MapPlaceholder>
-  <MapLabel>지도</MapLabel>
-  <ArrowContainer>
-    <ArrowUp />
-  </ArrowContainer>
-</MapPlaceholder>
+      <MapContainer>
+        <RouteMapComponent
+          places={allPlaces}
+          selectedPlaceIndex={null}
+          initialCityName={initialCityName}
+        />
+        <ArrowContainer>
+          <ArrowUp />
+        </ArrowContainer>
+      </MapContainer>
 
       {/* Content */}
       <Content>
         {travelData.days.map((day, dayIndex) => (
           <DaySection 
             key={day.dayNumber}
+            onDragOver={isEditMode ? handleDragOver : undefined}
+            onDrop={isEditMode ? (e) => handleDrop(e, dayIndex) : undefined}
+            $isEditMode={isEditMode}
           >
             <DayTitle>
               Day {day.dayNumber} {day.date}
             </DayTitle>
             
-            {day.items.map((item) => (
-              <ActivityItem 
-                key={item.id}
-                draggable={isEditMode}
-                onDragStart={isEditMode ? (e) => handleDragStart(e, item.id) : undefined}
-                onDragEnd={isEditMode ? handleDragEnd : undefined}
-              >
-                {isEditMode ? (
-                  <RadioButton
-                    type="radio"
-                    checked={selectedItems.includes(item.id)}
-                    onChange={() => handleSelectItem(item.id)}
-                  />
-                ) : (
-                  <ActivityIcon color={item.color}>
-                    {item.number ? (
-                      <NumberIcon>{item.number}</NumberIcon>
-                    ) : item.iconType === "restaurant" ? (
-                      <IconWrapper>
-                        <Image src="/icons/res-icon.png" alt="restaurant" width={24} height={24} />
-                      </IconWrapper>
-                    ) : item.iconType === "hotel" ? (
-                      <IconWrapper>
-                        <Image src="/icons/hotel-icon.png" alt="hotel" width={24} height={24} />
-                      </IconWrapper>
-                    ) : null}
-                  </ActivityIcon>
-                )}
-                <ActivityContent>
-                  <ActivityTitle>{item.title}</ActivityTitle>
-                  <ActivityDetails>{item.details}</ActivityDetails>
-                </ActivityContent>
-                {isEditMode && (
-                  <DragHandle
-                    onDragOver={handleDragOver}
-                    onDrop={(e) => handleDrop(e, dayIndex)}
-                  >
-                    <DragLine />
-                    <DragLine />
-                    <DragLine />
-                  </DragHandle>
-                )}
-              </ActivityItem>
-            ))}
+            {day.items.length === 0 ? (
+              <EmptyDayMessage>이 날짜에는 장소가 없습니다</EmptyDayMessage>
+            ) : (
+              day.items.map((item) => (
+                <ActivityItem 
+                  key={item.id}
+                  draggable={isEditMode}
+                  onDragStart={isEditMode ? (e) => handleDragStart(e, item.id) : undefined}
+                  onDragEnd={isEditMode ? handleDragEnd : undefined}
+                >
+                  {isEditMode ? (
+                    <RadioButton
+                      type="radio"
+                      checked={selectedItems.includes(item.id)}
+                      onChange={() => handleSelectItem(item.id)}
+                    />
+                  ) : (
+                    <ActivityIcon color={item.color}>
+                      {item.number ? (
+                        <NumberIcon>{item.number}</NumberIcon>
+                      ) : item.iconType === "restaurant" ? (
+                        <IconWrapper>
+                          <Image src="/icons/res-icon.png" alt="restaurant" width={24} height={24} />
+                        </IconWrapper>
+                      ) : item.iconType === "hotel" ? (
+                        <IconWrapper>
+                          <Image src="/icons/hotel-icon.png" alt="hotel" width={24} height={24} />
+                        </IconWrapper>
+                      ) : null}
+                    </ActivityIcon>
+                  )}
+                  <ActivityContent>
+                    <ActivityTitle>{item.title}</ActivityTitle>
+                    <ActivityDetails>{item.details}</ActivityDetails>
+                  </ActivityContent>
+                  {isEditMode && (
+                    <DragHandle>
+                      <DragLine />
+                      <DragLine />
+                      <DragLine />
+                    </DragHandle>
+                  )}
+                </ActivityItem>
+              ))
+            )}
           </DaySection>
         ))}
       </Content>
@@ -315,7 +632,9 @@ const TravelItineraryApp: React.FC = () => {
         ) : (
           <>
             <EditButton onClick={handleEdit}>수정하기</EditButton>
-            <RegisterButton onClick={handleRegisterSchedule}>일정 등록하기</RegisterButton>
+            <RegisterButton onClick={handleRegisterSchedule} disabled={isRegistering}>
+              {isRegistering ? '등록 중...' : '일정 등록하기'}
+            </RegisterButton>
           </>
         )}
       </ActionButtons>
@@ -429,20 +748,13 @@ const DateText = styled.div`
   color: #777777;
 `;
 
-const MapPlaceholder = styled.div`
+const MapContainer = styled.div`
   height: 200px;
-  background: #e5e5e5;
   margin: 0 20px 20px 20px;
   border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   position: relative;
-`;
-
-const MapLabel = styled.div`
-  color: #999;
-  font-size: 16px;
+  overflow: hidden;
+  background: #e5e5e5;
 `;
 
 const ArrowContainer = styled.div`
@@ -488,8 +800,26 @@ const Content = styled.div`
   padding: 0 20px;
 `;
 
-const DaySection = styled.div`
+const DaySection = styled.div<{ $isEditMode?: boolean }>`
   margin-bottom: 30px;
+  min-height: ${({ $isEditMode }) => $isEditMode ? '100px' : 'auto'};
+  padding: ${({ $isEditMode }) => $isEditMode ? '10px' : '0'};
+  border-radius: ${({ $isEditMode }) => $isEditMode ? '8px' : '0'};
+  background: ${({ $isEditMode }) => $isEditMode ? '#f9f9f9' : 'transparent'};
+  transition: background 0.2s ease;
+  
+  ${({ $isEditMode }) => $isEditMode && `
+    &:hover {
+      background: #f0f0f0;
+    }
+  `}
+`;
+
+const EmptyDayMessage = styled.div`
+  padding: 20px;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
 `;
 
 const DayTitle = styled.h2`
@@ -574,15 +904,16 @@ const EditButton = styled.button<{ disabled?: boolean }>`
   opacity: ${({ disabled }) => disabled ? 0.5 : 1};
 `;
 
-const RegisterButton = styled.button`
-  background: #3CA6FF;
+const RegisterButton = styled.button<{ disabled?: boolean }>`
+  background: ${({ disabled }) => disabled ? '#ccc' : '#3CA6FF'};
   border: none;
   color: white;
   padding: 16px;
   border-radius: 12px;
   font-size: 16px;
   font-weight: 600;
-  cursor: pointer;
+  cursor: ${({ disabled }) => disabled ? 'not-allowed' : 'pointer'};
+  opacity: ${({ disabled }) => disabled ? 0.6 : 1};
 `;
 
 
