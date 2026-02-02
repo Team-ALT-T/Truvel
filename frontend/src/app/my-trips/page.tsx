@@ -24,6 +24,7 @@ interface HoverIconProps {
   off: string
   on: string
   active?: boolean
+  onClick?: () => void
 }
 
 const MyTripsPage = () => {
@@ -106,6 +107,43 @@ const MyTripsPage = () => {
     router.push('my-trips/popular')
   }
 
+  // 오늘 날짜와 겹치는 여행 찾기
+  const findTodayOverlappingTrip = (): number | null => {
+    if (!travelPlans) return null
+    
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    
+    // 오늘 날짜가 startDate와 endDate 사이에 있는 여행 찾기
+    for (const plan of travelPlans) {
+      const startDate = new Date(plan.startDate)
+      startDate.setHours(0, 0, 0, 0)
+      const endDate = new Date(plan.endDate)
+      endDate.setHours(0, 0, 0, 0)
+      
+      if (today >= startDate && today <= endDate) {
+        return plan.travelPlanId
+      }
+    }
+    
+    return null
+  }
+
+  const handleMapClick = () => {
+    const overlappingTripId = findTodayOverlappingTrip()
+    
+    if (overlappingTripId) {
+      // sessionStorage에 travelPlanId 저장
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('currentTravelPlanId', String(overlappingTripId))
+      }
+      router.push('/my-trips/map')
+    } else {
+      // 겹치는 여행이 없으면 일반 맵 페이지로 이동
+      router.push('/map')
+    }
+  }
+
   if (isLoading) {
     return (
       <PageContainer>
@@ -176,7 +214,7 @@ const MyTripsPage = () => {
       <Footer>
         <HoverIconButton path="/home" label="홈" off="/icons/home-off.png" on="/icons/home-on.png" />
         <HoverIconButton path="/my-trips" label="내 여행" off="/icons/trip-on.png" on="/icons/trip-on.png" active />
-        <HoverIconButton path="/map" label="지도" off="/icons/map-off.png" on="/icons/map-on.png" />
+        <HoverIconButton path="/map" label="지도" off="/icons/map-off.png" on="/icons/map-on.png" onClick={handleMapClick} />
         <HoverIconButton path="/account" label="가계부" off="/icons/money-off.png" on="/icons/money-on.png" />
         <HoverIconButton path="/my" label="MY" off="/icons/my-off.png" on="/icons/my-on.png" />
       </Footer>
@@ -208,13 +246,21 @@ const IconButton = styled.button<{ $active: boolean }>`
   }
 `
 
-function HoverIconButton({ path, label, off, on, active = false }: HoverIconProps) {
+function HoverIconButton({ path, label, off, on, active = false, onClick }: HoverIconProps) {
   const router = useRouter()
   const [hover, setHover] = useState(false)
 
+  const handleClick = () => {
+    if (onClick) {
+      onClick()
+    } else {
+      router.push(path)
+    }
+  }
+
   return (
     <IconButton
-      onClick={() => router.push(path)}
+      onClick={handleClick}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       $active={active}
