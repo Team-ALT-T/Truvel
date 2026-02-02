@@ -35,6 +35,7 @@ export default function RouteMapComponent({
 }: RouteMapComponentProps) {
   const [map, setMap] = useState<any>(null);
   const [center, setCenter] = useState<{ lat: number; lng: number }>(defaultCenter);
+  const [isScriptLoaded, setIsScriptLoaded] = useState(false);
 
   // 실제 좌표가 있는 장소들만 필터링
   const validPlaces = useMemo(() => {
@@ -85,26 +86,46 @@ export default function RouteMapComponent({
     setMap(map);
     
     // 모든 마커가 보이도록 bounds 조정
-    if (validPlaces.length > 0 && map && typeof window !== 'undefined' && (window as any).google) {
-      const google = (window as any).google;
-      const bounds = new google.maps.LatLngBounds();
-      validPlaces.forEach(place => {
-        bounds.extend(new google.maps.LatLng(place.latitude!, place.longitude!));
-      });
-      map.fitBounds(bounds);
-      
-      // 줌 레벨이 너무 크면 최대 줌 제한
-      const listener = google.maps.event.addListener(map, 'bounds_changed', () => {
-        if (map.getZoom()! > 15) {
-          map.setZoom(15);
+    if (validPlaces.length > 0 && map && typeof window !== 'undefined') {
+      // google.maps 객체가 완전히 로드되었는지 확인
+      let retryCount = 0;
+      const maxRetries = 50;
+      const checkAndSetBounds = () => {
+        if ((window as any).google && (window as any).google.maps && (window as any).google.maps.LatLngBounds) {
+          try {
+            const google = (window as any).google;
+            const bounds = new google.maps.LatLngBounds();
+            validPlaces.forEach(place => {
+              bounds.extend(new google.maps.LatLng(place.latitude!, place.longitude!));
+            });
+            map.fitBounds(bounds);
+            
+            // 줌 레벨이 너무 크면 최대 줌 제한
+            const listener = google.maps.event.addListener(map, 'bounds_changed', () => {
+              if (map.getZoom()! > 15) {
+                map.setZoom(15);
+              }
+              google.maps.event.removeListener(listener);
+            });
+          } catch (error) {
+            console.error('Error setting map bounds:', error);
+          }
+        } else if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(checkAndSetBounds, 100);
         }
-        google.maps.event.removeListener(listener);
-      });
+      };
+      checkAndSetBounds();
     }
   }, [validPlaces]);
 
   const onUnmount = useCallback(() => {
     setMap(null);
+  }, []);
+
+  // LoadScript의 onLoad 콜백 - API가 완전히 로드된 후 호출
+  const handleScriptLoad = useCallback(() => {
+    setIsScriptLoaded(true);
   }, []);
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
@@ -135,21 +156,25 @@ export default function RouteMapComponent({
   }
 
   return (
-    <LoadScript googleMapsApiKey={apiKey}>
-      <GoogleMap
-        mapContainerStyle={containerStyle}
-        center={center}
-        zoom={13}
-        onLoad={onLoad}
-        onUnmount={onUnmount}
-        options={{
-          disableDefaultUI: false,
-          zoomControl: true,
-          streetViewControl: false,
-          mapTypeControl: false,
-          fullscreenControl: false,
-        }}
-      >
+    <LoadScript 
+      googleMapsApiKey={apiKey}
+      onLoad={handleScriptLoad}
+    >
+      {isScriptLoaded && (
+        <GoogleMap
+          mapContainerStyle={containerStyle}
+          center={center}
+          zoom={13}
+          onLoad={onLoad}
+          onUnmount={onUnmount}
+          options={{
+            disableDefaultUI: false,
+            zoomControl: true,
+            streetViewControl: false,
+            mapTypeControl: false,
+            fullscreenControl: false,
+          }}
+        >
         {/* 선택한 장소들을 순서대로 마커 표시 */}
         {validPlaces.map((place, index) => {
           const isSelected = selectedPlaceIndex === index;
@@ -194,7 +219,8 @@ export default function RouteMapComponent({
             }}
           />
         )}
-      </GoogleMap>
+        </GoogleMap>
+      )}
     </LoadScript>
   );
 }
