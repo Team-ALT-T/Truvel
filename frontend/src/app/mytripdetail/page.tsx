@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useState } from "react";
-import { Map, Share, MoreVertical } from "lucide-react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { Map as MapIcon, Share, MoreVertical, ChevronLeft } from "lucide-react";
 import Image from 'next/image';
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { getTravelPlan, createDaySchedule, updateDaySchedule, type DayScheduleRequest } from '@/lib/api/travel';
+import { getLocations, type LocationResponse } from '@/lib/api/location';
 
 // TypeScript 인터페이스 정의
 interface Flight {
@@ -51,12 +53,21 @@ interface TravelData {
   days: DayPlan[];
 }
 
+/** API 호출용: 해당 날짜의 daySchedule 메타 (메모 저장/수정 시 사용) */
+interface DayScheduleMeta {
+  dayScheduleId?: number;
+  dateISO: string;
+  startTime: string;
+  finishTime: string;
+  schedules: { locationName: string; scheduleOrder: number; preferTime: "Morning" | "Afternoon" | "Evening" | "Random" }[];
+}
+
 // Styled Components
 const App = styled.div`
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: #f8f8f8;
   min-height: 100vh;
-  max-width: 400px;
+  max-width: 1400px;
   margin: 0 auto;
   position: relative;
 `;
@@ -492,7 +503,7 @@ const Footer = styled.footer`
   align-items: center;
   height: 4rem;
   width: 100%;
-  max-width: 400px;
+  max-width: 1400px;
   font-size: 0.75rem;
   z-index: 20;
   border-top-left-radius: 1rem;
@@ -500,75 +511,163 @@ const Footer = styled.footer`
   box-shadow: 0 -2px 6px rgba(0, 0, 0, 0.05);
 `;
 
+const DAYS_KO = ["일", "월", "화", "수", "목", "금", "토"];
+
 const TravelItineraryApp: React.FC = () => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const travelPlanId = searchParams.get("id");
+
   const [activeTab, setActiveTab] = useState<string>("전체 경로 최적화");
   const [showMemoModal, setShowMemoModal] = useState(false);
   const [showPlaceDrawer, setShowPlaceDrawer] = useState(false);
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
   const [memoText, setMemoText] = useState("");
   const [editingMemoId, setEditingMemoId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [travelData, setTravelData] = useState<TravelData>({
-    title: "샌프란시스코 여행",
-    dates: "2025. 05. 12~ 05. 16",
-    days: [
-      {
-        date: "05. 12 월",
-        dayNumber: 1,
-        items: [
-          {
-            id: "1",
-            departure: "ICN",
-            arrival: "SFO",
-            time: "11:00",
-            airport: "대한항공 KE101",
-            details: "메모 내용",
-            type: "flight",
-          },
-          {
-            id: "2",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#8B9DC3",
-            iconType: "number",
-            number: 1,
-          },
-          {
-            id: "3",
-            text: "메모 내용만 있을 땐 최대 3줄 보이도록",
-            type: "memo",
-          },
-        ],
-      },
-      {
-        date: "05. 13 화",
-        dayNumber: 2,
-        items: [
-          {
-            id: "4",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#8B5A96",
-            iconType: "hotel",
-          },
-          {
-            id: "5",
-            title: "장소 이름",
-            details: "테마 (음식점, 관광명소, 쇼핑, 체험 등)",
-            type: "activity",
-            color: "#E67E22",
-            iconType: "food",
-          },
-          {
-            id: "6",
-            text: "메모 내용만 있을 땐 최대 3줄 보이도록",
-            type: "memo",
-          },
-        ],
-      },
-    ],
+    title: "",
+    dates: "",
+    days: [],
   });
+  /** 각 Day별 API 메타 (dayScheduleId, dateISO, startTime, finishTime, schedules) - 메모 저장 시 사용 */
+  const [dayScheduleMetaList, setDayScheduleMetaList] = useState<DayScheduleMeta[]>([]);
+  const [isSavingMemo, setIsSavingMemo] = useState(false);
+
+  // 여행 일정 API 연동
+  useEffect(() => {
+    if (!travelPlanId) {
+      setIsLoading(false);
+      setLoadError("여행 일정 ID가 없습니다.");
+      return;
+    }
+    const id = Number(travelPlanId);
+    if (Number.isNaN(id)) {
+      setIsLoading(false);
+      setLoadError("잘못된 여행 일정 ID입니다.");
+      return;
+    }
+
+    setIsLoading(true);
+    setLoadError(null);
+
+    Promise.all([getTravelPlan(id), getLocations(id)])
+      .then(([plan, allLocations]) => {
+        const locationMap = new Map<string, LocationResponse>();
+        allLocations.forEach((loc) => locationMap.set(loc.place, loc));
+
+        const title = `${plan.cityName} 여행`;
+        const start = new Date(plan.startDate);
+        const end = new Date(plan.endDate);
+        const formatDate = (d: Date) =>
+          `${String(d.getFullYear()).slice(2)}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(d.getDate()).padStart(2, "0")}`;
+        const dates = `${formatDate(start)}~ ${formatDate(end)}`;
+
+        // 여행 기간 전체(시작일~종료일) 기준으로 Day 구성 (1일이라도 메모 등 위해 표시)
+        const planStart = new Date(plan.startDate);
+        const planEnd = new Date(plan.endDate);
+        planStart.setHours(0, 0, 0, 0);
+        planEnd.setHours(0, 0, 0, 0);
+        const dayCount = Math.max(1, Math.ceil((planEnd.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+
+        const scheduleByDate = new Map<string, any>();
+        (plan.daySchedules ?? []).forEach((ds: any) => {
+          const d = new Date(ds.date);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          scheduleByDate.set(key, ds);
+        });
+
+        const days: DayPlan[] = [];
+        const metaList: DayScheduleMeta[] = [];
+
+        const toTimeStr = (t: any): string => {
+          if (t == null) return "09:00:00";
+          const s = String(t);
+          if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return s;
+          if (/^\d{1,2}:\d{2}$/.test(s)) return `${s.padStart(5, "0")}:00`;
+          return "09:00:00";
+        };
+
+        for (let i = 0; i < dayCount; i++) {
+          const d = new Date(planStart);
+          d.setDate(planStart.getDate() + i);
+          d.setHours(0, 0, 0, 0);
+          const dateStr = `${String(d.getMonth() + 1).padStart(2, "0")}. ${String(d.getDate()).padStart(2, "0")} ${DAYS_KO[d.getDay()]}`;
+          const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const ds = scheduleByDate.get(dateKey);
+
+          const items: (Flight | Activity | Status | MemoItem)[] = [];
+          let meta: DayScheduleMeta = {
+            dateISO: dateKey,
+            startTime: "09:00:00",
+            finishTime: "18:00:00",
+            schedules: [],
+          };
+          if (ds) {
+            meta.dayScheduleId = ds.day_schedule_id ?? ds.dayScheduleId;
+            meta.startTime = toTimeStr(ds.startTime);
+            meta.finishTime = toTimeStr(ds.finishTime);
+            if (ds.schedules && Array.isArray(ds.schedules)) {
+              const preferTimes = ["Morning", "Afternoon", "Evening", "Random"] as const;
+              meta.schedules = ds.schedules.map((s: any) => ({
+                locationName: s.location?.place ?? s.location?.name ?? s.locationName ?? "",
+                scheduleOrder: s.scheduleOrder ?? 0,
+                preferTime: preferTimes.includes(s.preferTime) ? s.preferTime : "Random",
+              }));
+            }
+          }
+          metaList.push(meta);
+
+          if (ds && ds.schedules && Array.isArray(ds.schedules)) {
+            const schedules = [...ds.schedules].sort((a: any, b: any) => (a.scheduleOrder ?? 0) - (b.scheduleOrder ?? 0));
+            schedules.forEach((s: any, idx: number) => {
+              const loc = s.location && s.location.latitude != null
+                ? s.location
+                : (s.locationName ? locationMap.get(s.locationName) : null);
+              const name = loc?.name ?? loc?.place ?? s.locationName ?? "장소";
+              const theme = loc?.category ?? "관광명소";
+              const address = loc?.address ?? "";
+              items.push({
+                id: `day-${i}-s-${idx}`,
+                title: name,
+                details: address ? `테마 (${theme}) · ${address}` : `테마 (${theme})`,
+                type: "activity",
+                color: "#8B9DC3",
+                iconType: "number",
+                number: idx + 1,
+              });
+            });
+            if (ds.dayScheduleMemo && String(ds.dayScheduleMemo).trim()) {
+              items.push({
+                id: `day-${i}-memo`,
+                text: ds.dayScheduleMemo,
+                type: "memo",
+              });
+            }
+          }
+
+          days.push({
+            date: dateStr,
+            dayNumber: i + 1,
+            items,
+          });
+        }
+
+        setTravelData({
+          title: title || "여행",
+          dates: dates || "",
+          days,
+        });
+        setDayScheduleMetaList(metaList);
+        setIsLoading(false);
+      })
+      .catch((err) => {
+        console.error("mytripdetail load error:", err);
+        setLoadError("일정을 불러오는데 실패했습니다.");
+        setIsLoading(false);
+      });
+  }, [travelPlanId]);
 
   const handleAddMemo = (dayIndex: number) => {
     setCurrentDayIndex(dayIndex);
@@ -590,74 +689,180 @@ const TravelItineraryApp: React.FC = () => {
     setShowPlaceDrawer(true);
   };
 
+  const handleMapClick = () => {
+    if (travelPlanId) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("currentTravelPlanId", travelPlanId);
+      }
+      router.push(`/my-trips/map?id=${travelPlanId}`);
+    } else {
+      router.push("/my-trips/map");
+    }
+  };
+
   const addPlace = (placeName: string) => {
     // 장소 추가 기능 비활성화 - 실제로는 아무것도 하지 않음
     console.log("장소 추가 기능이 비활성화되었습니다:", placeName);
     setShowPlaceDrawer(false);
   };
 
-  const saveMemo = () => {
-    if (memoText.trim()) {
-      if (editingMemoId) {
-        // 기존 메모 수정
-        setTravelData((prev) => ({
-          ...prev,
-          days: prev.days.map((day, index) =>
-            index === currentDayIndex
-              ? {
-                  ...day,
-                  items: day.items.map((item) =>
-                    item.id === editingMemoId
-                      ? { ...item, text: memoText }
-                      : item
-                  ),
-                }
-              : day
-          ),
-        }));
-      } else {
-        // 새 메모 추가
-        const newMemo: MemoItem = {
-          id: `memo-${Math.random().toString(36).substr(2, 9)}`,
-          text: memoText,
-          type: "memo",
+  /** 메모 저장/삭제 후 plan 다시 불러와서 화면 갱신 */
+  const refetchPlanAndApply = useCallback(() => {
+    if (!travelPlanId) return Promise.resolve();
+    const id = Number(travelPlanId);
+    if (Number.isNaN(id)) return Promise.resolve();
+    return Promise.all([getTravelPlan(id), getLocations(id)])
+      .then(([plan, allLocations]) => {
+        const locationMap = new Map<string, LocationResponse>();
+        allLocations.forEach((loc) => locationMap.set(loc.place, loc));
+        const title = `${plan.cityName} 여행`;
+        const start = new Date(plan.startDate);
+        const end = new Date(plan.endDate);
+        const formatDate = (d: Date) =>
+          `${String(d.getFullYear()).slice(2)}. ${String(d.getMonth() + 1).padStart(2, "0")}. ${String(d.getDate()).padStart(2, "0")}`;
+        const dates = `${formatDate(start)}~ ${formatDate(end)}`;
+        const planStart = new Date(plan.startDate);
+        const planEnd = new Date(plan.endDate);
+        planStart.setHours(0, 0, 0, 0);
+        planEnd.setHours(0, 0, 0, 0);
+        const dayCount = Math.max(1, Math.ceil((planEnd.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000)) + 1);
+        const scheduleByDate = new Map<string, any>();
+        (plan.daySchedules ?? []).forEach((ds: any) => {
+          const d = new Date(ds.date);
+          const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          scheduleByDate.set(key, ds);
+        });
+        const days: DayPlan[] = [];
+        const metaList: DayScheduleMeta[] = [];
+        const toTimeStr = (t: any): string => {
+          if (t == null) return "09:00:00";
+          const s = String(t);
+          if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) return s;
+          if (/^\d{1,2}:\d{2}$/.test(s)) return `${s.padStart(5, "0")}:00`;
+          return "09:00:00";
         };
+        for (let i = 0; i < dayCount; i++) {
+          const d = new Date(planStart);
+          d.setDate(planStart.getDate() + i);
+          d.setHours(0, 0, 0, 0);
+          const dateStr = `${String(d.getMonth() + 1).padStart(2, "0")}. ${String(d.getDate()).padStart(2, "0")} ${DAYS_KO[d.getDay()]}`;
+          const dateKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+          const ds = scheduleByDate.get(dateKey);
+          const items: (Flight | Activity | Status | MemoItem)[] = [];
+          let meta: DayScheduleMeta = { dateISO: dateKey, startTime: "09:00:00", finishTime: "18:00:00", schedules: [] };
+          if (ds) {
+            meta.dayScheduleId = ds.day_schedule_id ?? ds.dayScheduleId;
+            meta.startTime = toTimeStr(ds.startTime);
+            meta.finishTime = toTimeStr(ds.finishTime);
+            if (ds.schedules && Array.isArray(ds.schedules)) {
+              const preferTimes = ["Morning", "Afternoon", "Evening", "Random"] as const;
+              meta.schedules = ds.schedules.map((s: any) => ({
+                locationName: s.location?.place ?? s.location?.name ?? s.locationName ?? "",
+                scheduleOrder: s.scheduleOrder ?? 0,
+                preferTime: preferTimes.includes(s.preferTime) ? s.preferTime : "Random",
+              }));
+            }
+          }
+          metaList.push(meta);
+          if (ds && ds.schedules && Array.isArray(ds.schedules)) {
+            const schedules = [...ds.schedules].sort((a: any, b: any) => (a.scheduleOrder ?? 0) - (b.scheduleOrder ?? 0));
+            schedules.forEach((s: any, idx: number) => {
+              const loc = s.location && s.location.latitude != null ? s.location : (s.locationName ? locationMap.get(s.locationName) : null);
+              const name = loc?.name ?? loc?.place ?? s.locationName ?? "장소";
+              const theme = loc?.category ?? "관광명소";
+              const address = loc?.address ?? "";
+              items.push({
+                id: `day-${i}-s-${idx}`,
+                title: name,
+                details: address ? `테마 (${theme}) · ${address}` : `테마 (${theme})`,
+                type: "activity",
+                color: "#8B9DC3",
+                iconType: "number",
+                number: idx + 1,
+              });
+            });
+            if (ds.dayScheduleMemo && String(ds.dayScheduleMemo).trim()) {
+              items.push({ id: `day-${i}-memo`, text: ds.dayScheduleMemo, type: "memo" });
+            }
+          }
+          days.push({ date: dateStr, dayNumber: i + 1, items });
+        }
+        setTravelData({ title: title || "여행", dates: dates || "", days });
+        setDayScheduleMetaList(metaList);
+      });
+  }, [travelPlanId]);
 
-        setTravelData((prev) => ({
-          ...prev,
-          days: prev.days.map((day, index) =>
-            index === currentDayIndex
-              ? { ...day, items: [...day.items, newMemo] }
-              : day
-          ),
-        }));
+  const saveMemo = async () => {
+    const text = memoText.trim();
+    if (!text) return;
+    const id = Number(travelPlanId);
+    if (Number.isNaN(id) || !travelPlanId) return;
+    const meta = dayScheduleMetaList[currentDayIndex];
+    if (!meta) return;
+
+    setIsSavingMemo(true);
+    const request: DayScheduleRequest = {
+      date: meta.dateISO,
+      startTime: meta.startTime,
+      finishTime: meta.finishTime,
+      dayScheduleMemo: text,
+      schedules: meta.schedules,
+    };
+
+    try {
+      if (meta.dayScheduleId != null) {
+        await updateDaySchedule(meta.dayScheduleId, request);
+      } else {
+        await createDaySchedule(id, request);
       }
-
+      await refetchPlanAndApply();
       setMemoText("");
       setEditingMemoId(null);
       setShowMemoModal(false);
+    } catch (err) {
+      console.error("메모 저장 실패:", err);
+    } finally {
+      setIsSavingMemo(false);
     }
   };
 
-  const deleteMemo = () => {
-    if (editingMemoId) {
-      // 기존 메모 삭제
+  const deleteMemo = async () => {
+    const id = Number(travelPlanId);
+    if (Number.isNaN(id) || !travelPlanId) return;
+    const meta = dayScheduleMetaList[currentDayIndex];
+    if (!meta || meta.dayScheduleId == null) {
       setTravelData((prev) => ({
         ...prev,
         days: prev.days.map((day, index) =>
-          index === currentDayIndex
-            ? {
-                ...day,
-                items: day.items.filter((item) => item.id !== editingMemoId),
-              }
-            : day
+          index === currentDayIndex ? { ...day, items: day.items.filter((item) => item.type !== "memo") } : day
         ),
       }));
+      setMemoText("");
+      setEditingMemoId(null);
+      setShowMemoModal(false);
+      return;
     }
-    
-    setMemoText("");
-    setEditingMemoId(null);
-    setShowMemoModal(false);
+
+    setIsSavingMemo(true);
+    const request: DayScheduleRequest = {
+      date: meta.dateISO,
+      startTime: meta.startTime,
+      finishTime: meta.finishTime,
+      dayScheduleMemo: "",
+      schedules: meta.schedules,
+    };
+
+    try {
+      await updateDaySchedule(meta.dayScheduleId, request);
+      await refetchPlanAndApply();
+      setMemoText("");
+      setEditingMemoId(null);
+      setShowMemoModal(false);
+    } catch (err) {
+      console.error("메모 삭제 실패:", err);
+    } finally {
+      setIsSavingMemo(false);
+    }
   };
 
 
@@ -759,14 +964,58 @@ const TravelItineraryApp: React.FC = () => {
     );
   };
 
+  if (isLoading) {
+    return (
+      <App>
+        <Header>
+          <Title>일정 불러오는 중...</Title>
+        </Header>
+        <Content style={{ padding: "40px 20px", textAlign: "center", color: "#777" }}>
+          여행 일정을 불러오는 중입니다.
+        </Content>
+      </App>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <App>
+        <Header>
+          <Title>일정 조회</Title>
+        </Header>
+        <Content style={{ padding: "40px 20px", textAlign: "center", color: "#777" }}>
+          <p style={{ marginBottom: "16px" }}>{loadError}</p>
+          <ActionButton onClick={() => router.push("/my-trips")}>내 여행으로</ActionButton>
+        </Content>
+      </App>
+    );
+  }
+
   return (
     <App>
       {/* Header */}
       <Header>
         <HeaderTop>
-          <Title>{travelData.title}</Title>
-          <div style={{ display: "flex", gap: "16px" }}>
-            <Map className="w-6 h-6 text-gray-600" />
+          <div style={{ display: "flex", alignItems: "center", flex: 1, minWidth: 0 }}>
+            <button
+              type="button"
+              onClick={() => router.back()}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 4, marginRight: 8, flexShrink: 0 }}
+              aria-label="뒤로 가기"
+            >
+              <ChevronLeft className="w-6 h-6 text-gray-700" />
+            </button>
+            <Title style={{ margin: 0 }}>{travelData.title}</Title>
+          </div>
+          <div style={{ display: "flex", gap: "16px", alignItems: "center", flexShrink: 0 }}>
+            <button
+              type="button"
+              onClick={handleMapClick}
+              style={{ background: "none", border: "none", cursor: "pointer", padding: 4 }}
+              aria-label="지도 보기"
+            >
+              <MapIcon className="w-6 h-6 text-gray-600" />
+            </button>
             <Share className="w-6 h-6 text-gray-600" />
             <MoreVertical className="w-6 h-6 text-gray-600" />
           </div>
@@ -796,13 +1045,26 @@ const TravelItineraryApp: React.FC = () => {
         </TabContainer>
       </Header>
 
-      {/* Map Placeholder */}
-      <MapPlaceholder>지도</MapPlaceholder>
+      {/* Map Placeholder - 클릭 시 my-trips/map으로 이동 */}
+      <MapPlaceholder
+        onClick={handleMapClick}
+        style={{ cursor: "pointer" }}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e: React.KeyboardEvent) => e.key === "Enter" && handleMapClick()}
+      >
+        지도 (클릭 시 경로 지도 보기)
+      </MapPlaceholder>
 
       {/* Content */}
       <Content>
         {/* Daily Itinerary */}
-        {travelData.days.map((day, dayIndex) => (
+        {travelData.days.length === 0 ? (
+          <div style={{ padding: "40px 20px", textAlign: "center", color: "#777" }}>
+            등록된 일정이 없습니다.
+          </div>
+        ) : (
+        travelData.days.map((day, dayIndex) => (
           <DaySection key={day.dayNumber}>
             <DayHeader>
               <DayTitle>
@@ -811,7 +1073,13 @@ const TravelItineraryApp: React.FC = () => {
               <EditButton>편집하기</EditButton>
             </DayHeader>
 
-            {day.items.map((item) => renderTimelineItem(item, dayIndex))}
+            {day.items.length === 0 ? (
+              <div style={{ padding: "16px 0", color: "#999", fontSize: "14px" }}>
+                이 날짜에 등록된 일정이 없습니다.
+              </div>
+            ) : (
+              day.items.map((item) => renderTimelineItem(item, dayIndex))
+            )}
 
             <ActionButtons>
               <ActionButton onClick={() => handleAddMemo(dayIndex)}>
@@ -822,7 +1090,8 @@ const TravelItineraryApp: React.FC = () => {
               </ActionButton>
             </ActionButtons>
           </DaySection>
-        ))}
+        ))
+        )}
       </Content>
 
       {/* 메모 추가 모달 */}
@@ -832,8 +1101,8 @@ const TravelItineraryApp: React.FC = () => {
             <ModalHeader>
               <ModalTitle>메모</ModalTitle>
               <div>
-                <ConfirmButton onClick={saveMemo}>
-                  확인
+                <ConfirmButton onClick={saveMemo} disabled={isSavingMemo}>
+                  {isSavingMemo ? "저장 중..." : "확인"}
                 </ConfirmButton>
                 <CloseButton onClick={deleteMemo}>
                   삭제
