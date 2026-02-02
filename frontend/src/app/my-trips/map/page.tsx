@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import Image from 'next/image';
@@ -31,6 +31,7 @@ const RouteMapComponent = dynamic(
 
 export default function Page() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [selectedPlaces, setSelectedPlaces] = useState<
     { name: string; address: string; latitude: number; longitude: number; image?: string; rating?: number; reviewCount?: number; types?: string[] | null; photoReference?: string | null }[]
   >([]);
@@ -76,11 +77,13 @@ export default function Page() {
   const [currentDayIndex, setCurrentDayIndex] = useState(0);
   const [totalDays, setTotalDays] = useState(1);
   const [startDate, setStartDate] = useState<Date>(new Date());
+  const [travelPlanCityName, setTravelPlanCityName] = useState<string | null>(null);
 
-  // 경로 뷰어 모드 체크 및 데이터 로드
+  // 경로 뷰어 모드 체크 및 데이터 로드 (URL id 우선, 없으면 sessionStorage)
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const currentTravelPlanId = sessionStorage.getItem('currentTravelPlanId');
+      const idFromUrl = searchParams.get('id');
+      const currentTravelPlanId = idFromUrl ?? sessionStorage.getItem('currentTravelPlanId');
       
       if (currentTravelPlanId) {
         // 경로 뷰어 모드 활성화
@@ -93,6 +96,8 @@ export default function Page() {
           getLocations(Number(currentTravelPlanId))
         ])
           .then(([travelPlan, allLocations]) => {
+            setTravelPlanCityName(travelPlan.cityName ?? null);
+
             // locations를 name으로 매핑 (빠른 조회를 위해)
             const locationMap = new Map<string, LocationResponse>();
             allLocations.forEach(loc => {
@@ -131,175 +136,120 @@ export default function Page() {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
 
-            // daySchedules가 있으면 날짜별로 placesByDay 구성
-            if (travelPlan.daySchedules && Array.isArray(travelPlan.daySchedules) && travelPlan.daySchedules.length > 0) {
-              const sortedDaySchedules = [...travelPlan.daySchedules].sort((a: any, b: any) => {
-                const da = new Date(a.date);
-                const db = new Date(b.date);
-                return da.getTime() - db.getTime();
-              });
+            // 여행 기간 전체(시작일~종료일) 기준으로 Day 구성 (1일이라도 메모 등 위해 표시)
+            const planStart = new Date(travelPlan.startDate);
+            const planEnd = new Date(travelPlan.endDate);
+            planStart.setHours(0, 0, 0, 0);
+            planEnd.setHours(0, 0, 0, 0);
+            const dayCount = Math.max(1, Math.ceil((planEnd.getTime() - planStart.getTime()) / (24 * 60 * 60 * 1000)) + 1);
 
-              const allDaysPlaces: typeof routePlaces[] = [];
-
-              sortedDaySchedules.forEach((daySchedule: any) => {
-                if (!daySchedule.schedules || !Array.isArray(daySchedule.schedules)) {
-                  allDaysPlaces.push([]);
-                  return;
-                }
-                const sortedSchedules = [...daySchedule.schedules].sort((a: any, b: any) => (a.scheduleOrder || 0) - (b.scheduleOrder || 0));
-                const places: typeof routePlaces = [];
-
-                sortedSchedules.forEach((schedule: any, index: number) => {
-                  let location: any = null;
-                  if (schedule.location && schedule.location.latitude != null && schedule.location.longitude != null) {
-                    location = schedule.location;
-                  } else if (schedule.locationName) {
-                    location = locationMap.get(schedule.locationName);
-                  }
-                  if (!location) return;
-
-                  let distanceStr = "0m";
-                  if (index > 0 && places[index - 1]) {
-                    const prevPlace = places[index - 1];
-                    const R = 6371;
-                    const dLat = (location.latitude - prevPlace.latitude) * Math.PI / 180;
-                    const dLon = (location.longitude - prevPlace.longitude) * Math.PI / 180;
-                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(prevPlace.latitude * Math.PI / 180) * Math.cos(location.latitude * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                    const distanceKm = R * c;
-                    distanceStr = distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`;
-                  }
-
-                  let timeStr = "10:00";
-                  if (daySchedule.startTime && daySchedule.finishTime) {
-                    const startTime = new Date(`2000-01-01T${daySchedule.startTime}`);
-                    const finishTime = new Date(`2000-01-01T${daySchedule.finishTime}`);
-                    const totalMinutes = (finishTime.getTime() - startTime.getTime()) / (1000 * 60);
-                    const placeMinutes = Math.floor(totalMinutes / Math.max(sortedSchedules.length, 1)) * index;
-                    const visitMinutes = startTime.getMinutes() + placeMinutes;
-                    const visitHour = Math.floor(visitMinutes / 60) % 24;
-                    const visitMin = visitMinutes % 60;
-                    const hour12 = visitHour > 12 ? visitHour - 12 : (visitHour === 0 ? 12 : visitHour);
-                    const amPm = visitHour >= 12 ? 'PM' : 'AM';
-                    timeStr = `${hour12}:${String(visitMin).padStart(2, '0')} ${amPm}`;
-                  }
-
-                  places.push({
-                    name: location.name || location.place || schedule.locationName || '',
-                    address: location.address || '',
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                    theme: getThemeFromTypes(location.types || schedule.location?.types),
-                    distance: distanceStr,
-                    time: timeStr,
-                    rating: location.rating ?? schedule.location?.rating,
-                    reviewCount: location.reviewCount ?? schedule.location?.reviewCount,
-                    types: location.types ?? schedule.location?.types,
-                    phoneNumber: location.phoneNumber ?? schedule.location?.phoneNumber,
-                  });
-                });
-
-                allDaysPlaces.push(places);
-              });
-
-              const firstDayDate = sortedDaySchedules[0]?.date ? new Date(sortedDaySchedules[0].date) : today;
-              firstDayDate.setHours(0, 0, 0, 0);
-              let todayIndex = sortedDaySchedules.findIndex((ds: any) => {
+            // 날짜별 daySchedule 맵 (YYYY-MM-DD -> daySchedule)
+            const scheduleByDate = new Map<string, any>();
+            if (travelPlan.daySchedules && Array.isArray(travelPlan.daySchedules)) {
+              travelPlan.daySchedules.forEach((ds: any) => {
                 const d = new Date(ds.date);
-                d.setHours(0, 0, 0, 0);
-                return d.getTime() === today.getTime();
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                scheduleByDate.set(key, ds);
               });
-              if (todayIndex < 0) todayIndex = 0;
+            }
 
-              setPlacesByDay(allDaysPlaces);
-              setTotalDays(allDaysPlaces.length);
-              setStartDate(firstDayDate);
-              setCurrentDayIndex(todayIndex);
-              setRoutePlaces(allDaysPlaces[todayIndex] ?? []);
-              setSelectedPlaceIndex(0);
-              setIsLoadingRoute(false);
-            } else {
-              // daySchedules가 비어있을 때, getLocations로 직접 장소 가져오기 시도
-              if (allLocations && allLocations.length > 0) {
-                const places: Array<{
-                  name: string;
-                  address: string;
-                  latitude: number;
-                  longitude: number;
-                  theme: string;
-                  distance: string;
-                  time: string;
-                  rating?: number;
-                  reviewCount?: number;
-                  types?: string[];
-                  phoneNumber?: string;
-                }> = [];
-                
-                allLocations.forEach((location: LocationResponse, index: number) => {
-                  // 이전 장소로부터의 거리 계산
-                  let distanceStr = "0m";
-                  if (index > 0 && places[index - 1]) {
-                    const prevPlace = places[index - 1];
-                    const R = 6371; // 지구 반지름 (km)
-                    const dLat = (location.latitude - prevPlace.latitude) * Math.PI / 180;
-                    const dLon = (location.longitude - prevPlace.longitude) * Math.PI / 180;
-                    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                      Math.cos(prevPlace.latitude * Math.PI / 180) * Math.cos(location.latitude * Math.PI / 180) *
-                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                    const distanceKm = R * c;
-                    
-                    if (distanceKm < 1) {
-                      distanceStr = `${Math.round(distanceKm * 1000)}m`;
-                    } else {
-                      distanceStr = `${distanceKm.toFixed(1)}km`;
-                    }
-                  }
-                  
-                  // 기본 시간 설정 (오전 10시부터 시작해서 2시간 간격)
-                  const hour = 10 + (index * 2);
-                  const hour12 = hour > 12 ? hour - 12 : (hour === 0 ? 12 : hour);
-                  const amPm = hour >= 12 ? 'PM' : 'AM';
-                  const timeStr = `${hour12}:00 ${amPm}`;
-                  
-                  // category를 theme으로 사용
-                  const theme = location.category || "관광명소";
-                  
-                  const place = {
-                    name: location.place || '',
-                    address: location.address || '',
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                    theme: theme,
-                    distance: distanceStr,
-                    time: timeStr,
-                    rating: undefined,
-                    reviewCount: undefined,
-                    types: undefined,
-                    phoneNumber: undefined,
-                  };
-                  places.push(place);
+            const allDaysPlaces: typeof routePlaces[] = [];
+
+            for (let i = 0; i < dayCount; i++) {
+              const dayDate = new Date(planStart);
+              dayDate.setDate(planStart.getDate() + i);
+              dayDate.setHours(0, 0, 0, 0);
+              const dateKey = `${dayDate.getFullYear()}-${String(dayDate.getMonth() + 1).padStart(2, '0')}-${String(dayDate.getDate()).padStart(2, '0')}`;
+              const daySchedule = scheduleByDate.get(dateKey);
+
+              if (!daySchedule || !daySchedule.schedules || !Array.isArray(daySchedule.schedules)) {
+                allDaysPlaces.push([]);
+                continue;
+              }
+
+              const sortedSchedules = [...daySchedule.schedules].sort((a: any, b: any) => (a.scheduleOrder ?? 0) - (b.scheduleOrder ?? 0));
+              const places: typeof routePlaces = [];
+
+              sortedSchedules.forEach((schedule: any, index: number) => {
+                let location: any = null;
+                if (schedule.location && schedule.location.latitude != null && schedule.location.longitude != null) {
+                  location = schedule.location;
+                } else if (schedule.locationName) {
+                  location = locationMap.get(schedule.locationName);
+                }
+                if (!location) return;
+
+                let distanceStr = "0m";
+                if (index > 0 && places[index - 1]) {
+                  const prevPlace = places[index - 1];
+                  const R = 6371;
+                  const dLat = (location.latitude - prevPlace.latitude) * Math.PI / 180;
+                  const dLon = (location.longitude - prevPlace.longitude) * Math.PI / 180;
+                  const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                    Math.cos(prevPlace.latitude * Math.PI / 180) * Math.cos(location.latitude * Math.PI / 180) *
+                    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                  const distanceKm = R * c;
+                  distanceStr = distanceKm < 1 ? `${Math.round(distanceKm * 1000)}m` : `${distanceKm.toFixed(1)}km`;
+                }
+
+                let timeStr = "10:00";
+                if (daySchedule.startTime && daySchedule.finishTime) {
+                  const startTime = new Date(`2000-01-01T${daySchedule.startTime}`);
+                  const finishTime = new Date(`2000-01-01T${daySchedule.finishTime}`);
+                  const totalMinutes = (finishTime.getTime() - startTime.getTime()) / (1000 * 60);
+                  const placeMinutes = Math.floor(totalMinutes / Math.max(sortedSchedules.length, 1)) * index;
+                  const visitMinutes = startTime.getMinutes() + placeMinutes;
+                  const visitHour = Math.floor(visitMinutes / 60) % 24;
+                  const visitMin = visitMinutes % 60;
+                  const hour12 = visitHour > 12 ? visitHour - 12 : (visitHour === 0 ? 12 : visitHour);
+                  const amPm = visitHour >= 12 ? 'PM' : 'AM';
+                  timeStr = `${hour12}:${String(visitMin).padStart(2, '0')} ${amPm}`;
+                }
+
+                places.push({
+                  name: location.name || location.place || schedule.locationName || '',
+                  address: location.address || '',
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  theme: getThemeFromTypes(location.types || schedule.location?.types),
+                  distance: distanceStr,
+                  time: timeStr,
+                  rating: location.rating ?? schedule.location?.rating,
+                  reviewCount: location.reviewCount ?? schedule.location?.reviewCount,
+                  types: location.types ?? schedule.location?.types,
+                  phoneNumber: location.phoneNumber ?? schedule.location?.phoneNumber,
                 });
-                
-                setPlacesByDay([places]);
-                setTotalDays(1);
-                setStartDate(today);
-                setCurrentDayIndex(0);
-                setRoutePlaces(places);
-                setSelectedPlaceIndex(0);
-                setIsLoadingRoute(false);
-              } else {
-                setRoutePlaces([]);
-                setIsLoadingRoute(false);
+              });
+
+              allDaysPlaces.push(places);
+            }
+
+            const firstDayDate = new Date(planStart);
+            firstDayDate.setHours(0, 0, 0, 0);
+            let todayIndex = 0;
+            for (let i = 0; i < allDaysPlaces.length; i++) {
+              const d = new Date(planStart);
+              d.setDate(planStart.getDate() + i);
+              d.setHours(0, 0, 0, 0);
+              if (d.getTime() === today.getTime()) {
+                todayIndex = i;
+                break;
               }
             }
+
+            setPlacesByDay(allDaysPlaces);
+            setTotalDays(allDaysPlaces.length);
+            setStartDate(firstDayDate);
+            setCurrentDayIndex(todayIndex);
+            setRoutePlaces(allDaysPlaces[todayIndex] ?? []);
+            setSelectedPlaceIndex(0);
+            setIsLoadingRoute(false);
           })
           .catch((error) => {
             console.error('Failed to load travel plan:', error);
             setIsLoadingRoute(false);
-            // 에러 발생 시 일반 모드로 전환
+            setTravelPlanCityName(null);
             setIsRouteViewerMode(false);
             sessionStorage.removeItem('currentTravelPlanId');
           });
@@ -319,7 +269,7 @@ export default function Page() {
         }
       }
     }
-  }, []);
+  }, [searchParams]);
 
   // Day 변경 시 해당 날짜의 경로로 전환
   useEffect(() => {
@@ -329,23 +279,26 @@ export default function Page() {
     }
   }, [currentDayIndex, placesByDay]);
 
-  // 평점/리뷰가 없는 장소는 Google Places 검색으로 보강
+  // 평점/리뷰가 없는 장소는 Google Places 검색으로 보강 (placesByDay 갱신해 날짜 전환 시에도 유지)
   useEffect(() => {
     const places = placesByDay[currentDayIndex] ?? [];
     if (!places.length) return;
+    const dayIdx = currentDayIndex;
     places.forEach((place, index) => {
       if (place.rating != null && place.reviewCount != null) return;
       searchPlaces(place.name)
         .then((results) => {
           if (results && results[0]) {
             const r = results[0];
-            setRoutePlaces((prev) =>
-              prev.map((p, i) =>
-                i === index
-                  ? { ...p, rating: r.rating ?? undefined, reviewCount: r.reviewCount ?? undefined }
-                  : p
-              )
-            );
+            setPlacesByDay((prev) => {
+              const dayPlaces = prev[dayIdx] ?? [];
+              const updated = dayPlaces.map((p, i) =>
+                i === index ? { ...p, rating: r.rating ?? undefined, reviewCount: r.reviewCount ?? undefined } : p
+              );
+              const next = [...prev];
+              next[dayIdx] = updated;
+              return next;
+            });
           }
         })
         .catch(() => {});
@@ -507,17 +460,23 @@ export default function Page() {
             <LoadingContainer>
               <LoadingText>경로를 불러오는 중...</LoadingText>
             </LoadingContainer>
-          ) : routePlaces.length > 0 ? (
+          ) : (
             <>
               <MapContent aria-hidden="false">
                 <MapInnerWrap>
                   <RouteMapComponent
+                    key={`route-${currentDayIndex}-${routePlaces.length}`}
                     places={routePlaces}
                     selectedPlaceIndex={selectedPlaceIndex}
                     onPlaceClick={handlePlaceClick}
-                    initialCityName={null}
+                    initialCityName={travelPlanCityName}
                   />
                 </MapInnerWrap>
+                {routePlaces.length === 0 && totalDays > 0 && (
+                  <EmptyDayOverlay>
+                    <EmptyDayText>이 날짜에는 등록된 장소가 없습니다.</EmptyDayText>
+                  </EmptyDayOverlay>
+                )}
               </MapContent>
               {/* 하단 정보 패널 */}
               <BottomPanel onPointerDown={onPanelPointerDown} onPointerMove={onPanelPointerMove} onPointerUp={onPanelPointerUp}>
@@ -626,10 +585,6 @@ export default function Page() {
                 )}
               </BottomPanel>
             </>
-          ) : (
-            <LoadingContainer>
-              <LoadingText>경로 정보가 없습니다.</LoadingText>
-            </LoadingContainer>
           )}
         </MapContainer>
       </FullScreenContainer>
@@ -771,13 +726,22 @@ const DayNextBtn = styled.button`
 const MapContainer = styled.div`
   position: relative;
   flex: 1;
-  min-height: 250px;
+  min-height: 0;
   width: 100%;
   z-index: 0;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 `;
 
 const MapContent = styled.div`
+  flex: 1;
+  min-height: 200px;
+  width: 100%;
+  position: relative;
+`;
+
+const MapInnerWrap = styled.div`
   position: absolute;
   top: 0;
   left: 0;
@@ -785,14 +749,7 @@ const MapContent = styled.div`
   bottom: 0;
   width: 100%;
   height: 100%;
-  min-height: 250px;
-`;
-
-const MapInnerWrap = styled.div`
-  width: 100%;
-  height: 100%;
-  min-height: 250px;
-  position: relative;
+  min-height: 200px;
 `;
 
 const OverlayContent = styled.div`
@@ -1015,6 +972,25 @@ const LoadingContainer = styled.div`
 const LoadingText = styled.p`
   color: #666;
   font-size: 16px;
+  font-weight: 500;
+`;
+
+const EmptyDayOverlay = styled.div`
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+`;
+
+const EmptyDayText = styled.p`
+  color: #777;
+  font-size: 15px;
   font-weight: 500;
 `;
 

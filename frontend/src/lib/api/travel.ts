@@ -56,3 +56,9 @@ export const createDaySchedule = async (travelPlanId: number, request: DaySchedu
   const response = await apiClient.post<string>(`/daySchedule/create/${travelPlanId}`, request);
   return response.data;
 };
+
+// 일정 수정 API (메모 등)
+export const updateDaySchedule = async (dayScheduleId: number, request: DayScheduleRequest): Promise<string> => {
+  const response = await apiClient.put<string>(`/daySchedule/update/${dayScheduleId}`, request);
+  return response.data;
+};
