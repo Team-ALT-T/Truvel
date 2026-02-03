@@ -1038,7 +1038,7 @@ const TravelItineraryApp: React.FC = () => {
           </Tab>
           <Tab
             $active={activeTab === "일행 추가"}
-            onClick={() => setActiveTab("일행 추가")}
+            onClick={() => travelPlanId && router.push(`/mytripdetail/invite?id=${travelPlanId}`)}
           >
             + 일행 추가
           </Tab>
