@@ -214,7 +214,7 @@ const MyTripsPage = () => {
       <Footer>
         <HoverIconButton path="/home" label="홈" off="/icons/home-off.png" on="/icons/home-on.png" />
         <HoverIconButton path="/my-trips" label="내 여행" off="/icons/trip-on.png" on="/icons/trip-on.png" active />
-        <HoverIconButton path="/map" label="지도" off="/icons/map-off.png" on="/icons/map-on.png" onClick={handleMapClick} />
+        <HoverIconButton path="/my-trips/map" label="지도" off="/icons/map-off.png" on="/icons/map-on.png" onClick={handleMapClick} />
         <HoverIconButton path="/account" label="가계부" off="/icons/money-off.png" on="/icons/money-on.png" />
         <HoverIconButton path="/my" label="MY" off="/icons/my-off.png" on="/icons/my-on.png" />
       </Footer>
