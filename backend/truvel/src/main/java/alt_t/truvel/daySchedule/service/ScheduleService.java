@@ -26,7 +26,7 @@ public class ScheduleService {
     public List<Schedule> createSchedule(DaySchedule daySchedule, List<ScheduleRequest> scheduleRequests){
         List<Schedule> schedules = new ArrayList<>();
         scheduleRequests.forEach(scheduleRequest -> {
-            Location location = locationRepository.findByName(scheduleRequest.getLocationName())
+            Location location = locationRepository.findFirstByName(scheduleRequest.getLocationName())
                     .orElseThrow(() -> new NoSuchElementException(scheduleRequest.getLocationName() + "를 찾을 수 없습니다."));
 
             schedules.add(Schedule.of(daySchedule, scheduleRequest, location));

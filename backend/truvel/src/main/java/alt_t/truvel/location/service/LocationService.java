@@ -27,21 +27,23 @@ public class LocationService {
         return googlePlaceClient.search(query, lat, lng);
     }
 
-    // 장소 저장
+    // 장소 저장 (같은 이름의 장소가 이미 존재하면 기존 것을 반환)
     public List<LocationResponseDto> saveSelectedPlaces(List<LocationSaveRequestDto> dtos) {
         return dtos.stream().map(dto -> {
-            Location location = Location.builder()
-                    .name(dto.getName())
-                    .latitude(dto.getLatitude())
-                    .longitude(dto.getLongitude())
-                    .address(dto.getAddress())
-                    .category(dto.getCategory())
-                    .build();
-            System.out.println("[LocationService] 저장할 장소 정보: " + location.getCategory());
-            Location saved = locationRepository.save(location);
+            Location saved = locationRepository.findFirstByName(dto.getName())
+                    .orElseGet(() -> {
+                        Location location = Location.builder()
+                                .name(dto.getName())
+                                .latitude(dto.getLatitude())
+                                .longitude(dto.getLongitude())
+                                .address(dto.getAddress())
+                                .category(dto.getCategory())
+                                .build();
+                        return locationRepository.save(location);
+                    });
 
             return LocationResponseDto.builder()
-                    .locationId(saved.getLocation_id()) // 이제 null 아님
+                    .locationId(saved.getLocation_id())
                     .place(saved.getName())
                     .latitude(saved.getLatitude())
                     .longitude(saved.getLongitude())
@@ -66,7 +68,7 @@ public class LocationService {
     }
 
     public Location getLocationByName(String name) {
-        return locationRepository.findByName(name).orElseThrow(() -> new IllegalArgumentException("Invalid location name: " + name));
+        return locationRepository.findFirstByName(name).orElseThrow(() -> new IllegalArgumentException("Invalid location name: " + name));
     }
 
     public String deleteLocation(Long id){
