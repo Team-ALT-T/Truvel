@@ -92,19 +92,18 @@ const VerificationSubtitle = styled.p`
 
 const CodeInputContainer = styled.div`
   display: flex;
-  gap: 8px;
+  gap: clamp(4px, 2vw, 8px);
   justify-content: center;
-  margin-bottom: 450px;
+  margin: 24px 0 32px;
 `;
 
 const CodeInput = styled.input`
-  width: 70px;
-  height: 70px;
+  width: clamp(38px, 11.5vw, 70px);
+  height: clamp(48px, 11.5vw, 70px);
   border: 1px solid #e5e7eb;
   border-radius: 8px;
-  margin-top: 60px;
   text-align: center;
-  font-size: 20px;
+  font-size: clamp(16px, 4.5vw, 20px);
   font-weight: 600;
   color: #1C1C1C;
   background-color: white;
