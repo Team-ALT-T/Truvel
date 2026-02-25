@@ -14,8 +14,8 @@ import { test, expect } from "@playwright/test";
  */
 
 // ─── 테스트 계정 (Docker DB에 등록된 실제 계정) ─────
-const TEST_EMAIL = "every0520@naver.com";
-const TEST_PASSWORD = "a123@123";
+const TEST_EMAIL = "test@example.com";
+const TEST_PASSWORD = "Test1234!";
 
 test.describe("시나리오 1: 로그인 → 여행 목록", () => {
   test("로그인 성공 → 성공 페이지 → 여행 목록 확인", async ({ page }) => {

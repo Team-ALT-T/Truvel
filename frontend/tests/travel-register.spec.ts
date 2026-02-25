@@ -20,8 +20,8 @@ import { test, expect } from "@playwright/test";
  */
 
 // ─── 테스트 계정 ─────────────────────────────────────
-const TEST_EMAIL = "every0520@naver.com";
-const TEST_PASSWORD = "a123@123";
+const TEST_EMAIL = "test@example.com";
+const TEST_PASSWORD = "Test1234!";
 
 // ─── 로그인 헬퍼 ─────────────────────────────────────
 async function login(page: any) {
@@ -112,10 +112,10 @@ test.describe("시나리오 2: 여행 등록 전체 플로우", () => {
       await page.waitForTimeout(500);
     }
 
-    const day10 = page.getByText("10", { exact: true }).first();
+    const day10 = page.getByText("25", { exact: true }).first();
     await day10.click();
 
-    const day11 = page.getByText("11", { exact: true }).first();
+    const day11 = page.getByText("26", { exact: true }).first();
     await day11.click();
 
     await page.getByText("선택 완료").click();
