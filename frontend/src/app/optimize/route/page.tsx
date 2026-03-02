@@ -248,7 +248,7 @@ function DayBlock({ index, day, onChange }: { index: number; day: Day; onChange:
   );
 }
 
-export default function RouteOptimizePage() {
+function RouteOptimizePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   
@@ -347,6 +347,14 @@ export default function RouteOptimizePage() {
         }}>다음</NextButton>
       </Footer>
     </Page>
+  );
+}
+
+export default function RouteOptimizePage() {
+  return (
+    <React.Suspense fallback={null}>
+      <RouteOptimizePageContent />
+    </React.Suspense>
   );
 }
 
