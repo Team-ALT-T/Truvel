@@ -513,7 +513,7 @@ const Footer = styled.footer`
 
 const DAYS_KO = ["일", "월", "화", "수", "목", "금", "토"];
 
-const TravelItineraryApp: React.FC = () => {
+const TravelItineraryAppContent: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const travelPlanId = searchParams.get("id");
@@ -1178,6 +1178,12 @@ const TravelItineraryApp: React.FC = () => {
     </App>
   );
 };
+
+const TravelItineraryApp: React.FC = () => (
+  <React.Suspense fallback={null}>
+    <TravelItineraryAppContent />
+  </React.Suspense>
+);
 
 // 아이콘 컴포넌트들
 const NumberIcon = ({ children }: { children?: number }) => (

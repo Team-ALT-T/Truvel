@@ -352,7 +352,7 @@ const ModalConfirmButton = styled.button`
   }
 `;
 
-export default function InviteCompanionsPage() {
+function InviteCompanionsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const travelPlanId = searchParams.get("id");
@@ -559,5 +559,13 @@ export default function InviteCompanionsPage() {
         </Overlay>
       )}
     </PageWrap>
+  );
+}
+
+export default function InviteCompanionsPage() {
+  return (
+    <React.Suspense fallback={null}>
+      <InviteCompanionsPageContent />
+    </React.Suspense>
   );
 }

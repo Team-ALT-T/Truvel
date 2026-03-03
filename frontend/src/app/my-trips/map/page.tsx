@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { Suspense, useState, useEffect, useCallback, useMemo } from 'react';
 import styled from 'styled-components';
 import { useRouter, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
@@ -29,7 +29,7 @@ const RouteMapComponent = dynamic(
   }
 );
 
-export default function Page() {
+function MapPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [selectedPlaces, setSelectedPlaces] = useState<
@@ -648,6 +648,14 @@ export default function Page() {
         )}
       </OverlayContent>
     </FullScreenContainer>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={null}>
+      <MapPageContent />
+    </Suspense>
   );
 }
 

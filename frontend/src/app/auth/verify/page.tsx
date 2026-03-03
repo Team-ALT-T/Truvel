@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import styled from 'styled-components';
 import Image from 'next/image';
 import { useSearchParams } from 'next/navigation';
@@ -150,7 +150,7 @@ const VerifyButton = styled.button<{ $isValid: boolean }>`
   margin-top: auto;
 `;
 
-export default function VerifyPage() {
+function VerifyPageContent() {
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState(['', '', '', '', '', '']);
@@ -315,5 +315,13 @@ export default function VerifyPage() {
         </VerificationContainer>
       </Content>
     </Container>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <Suspense fallback={null}>
+      <VerifyPageContent />
+    </Suspense>
   );
 }

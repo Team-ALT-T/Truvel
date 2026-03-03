@@ -19,5 +19,8 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     // CSS import 시 에러 방지
     css: true,
+    // Playwright E2E 스펙(frontend/tests/*.spec.ts)은 Vitest 대상에서 제외
+    include: ["src/**/*.{test,spec}.{ts,tsx}"],
+    exclude: ["tests/**", "node_modules/**", "dist/**", ".next/**"],
   },
 });

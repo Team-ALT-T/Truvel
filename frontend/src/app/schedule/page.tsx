@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import * as S from "./stlyes";
@@ -50,7 +50,7 @@ const DateButton: React.FC<DateButtonProps> = ({
   );
 };
 
-const TravelDatePicker: React.FC<CalendarProps> = ({
+const TravelDatePickerView: React.FC<CalendarProps> = ({
   onDateSelect,
   initialDates = [],
 }) => {
@@ -287,4 +287,6 @@ const TravelDatePicker: React.FC<CalendarProps> = ({
   );
 };
 
-export default TravelDatePicker;
+const Page = () => <TravelDatePickerView />;
+
+export default Page;
