@@ -110,6 +110,8 @@ jobs:
           CI_GMAIL_ADDRESS: ${{ secrets.GMAIL_ADDRESS }}
           CI_GOOGLE_APP_PASSWORD: ${{ secrets.GOOGLE_APP_PASSWORD }}
         run: |
+          JWT_SECRET_RAW="${CI_JWT_SECRET:-ci-jwt-secret-for-tests-please-change-this-value}"
+          JWT_SECRET_B64="$(printf "%s" "$JWT_SECRET_RAW" | base64 | tr -d '\n')"
           cat <<EOF > .env
           DB_URL=jdbc:mysql://localhost:3308/truvel
           DB_NAME=truvel
@@ -119,7 +121,7 @@ jobs:
           REDIS_HOST=localhost
           REDIS_PORT=6379
           GOOGLE_API_KEY=${CI_GOOGLE_API_KEY:-dummy}
-          JWT_SECRET=${CI_JWT_SECRET:-dummy-jwt-secret-for-ci}
+          JWT_SECRET=${JWT_SECRET_B64}
           GMAIL_ADDRESS=${CI_GMAIL_ADDRESS:-dummy@example.com}
           GOOGLE_APP_PASSWORD=${CI_GOOGLE_APP_PASSWORD:-dummy-password}
           EOF
