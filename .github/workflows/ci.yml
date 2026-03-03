@@ -155,9 +155,9 @@ jobs:
               exit 1
             fi
 
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/error || true)
-            if [ "$STATUS" != "000" ] && [ "$STATUS" -lt 500 ]; then
-              echo "Backend app is reachable (HTTP $STATUS)."
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/auth/login || true)
+            if [[ "$STATUS" =~ ^[234][0-9][0-9]$ ]]; then
+              echo "Backend app is reachable (HTTP $STATUS from /auth/login)."
               exit 0
             fi
 
