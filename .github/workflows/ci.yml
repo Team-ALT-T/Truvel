@@ -132,6 +132,22 @@ jobs:
         working-directory: frontend
         run: npx wait-on tcp:8080
 
+      - name: Wait backend app readiness
+        working-directory: backend/truvel
+        run: |
+          for i in {1..60}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/error || true)
+            if [ "$STATUS" != "000" ]; then
+              echo "Backend is reachable (HTTP $STATUS)"
+              exit 0
+            fi
+            echo "Waiting for backend app... ($i/60)"
+            sleep 2
+          done
+          echo "Backend readiness timeout"
+          docker compose logs --no-color
+          exit 1
+
       - name: Start frontend
         working-directory: frontend
         env:
@@ -144,7 +160,7 @@ jobs:
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
-        run: npm run e2e
+        run: npm run e2e -- --workers=1
 
       - name: Dump docker logs
         if: failure()
