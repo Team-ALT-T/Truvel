@@ -113,12 +113,12 @@ jobs:
           JWT_SECRET_RAW="${CI_JWT_SECRET:-ci-jwt-secret-for-tests-please-change-this-value}"
           JWT_SECRET_B64="$(printf "%s" "$JWT_SECRET_RAW" | base64 | tr -d '\n')"
           cat <<EOF > .env
-          DB_URL=jdbc:mysql://localhost:3308/truvel
+          DB_URL=jdbc:mysql://mysql:3306/truvel
           DB_NAME=truvel
           DB_USER=truvel
           DB_PASSWORD=truvel
           DB_PORT=3308
-          REDIS_HOST=localhost
+          REDIS_HOST=redis
           REDIS_PORT=6379
           GOOGLE_API_KEY=${CI_GOOGLE_API_KEY:-dummy}
           JWT_SECRET=${JWT_SECRET_B64}
@@ -138,11 +138,17 @@ jobs:
         working-directory: backend/truvel
         run: |
           for i in {1..60}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/error || true)
-            if [ "$STATUS" != "000" ]; then
-              echo "Backend is reachable (HTTP $STATUS)"
+            if docker compose logs --no-color springboot_web | grep -q "APPLICATION FAILED TO START"; then
+              echo "Spring Boot failed to start."
+              docker compose logs --no-color
+              exit 1
+            fi
+
+            if docker compose logs --no-color springboot_web | grep -q "Started "; then
+              echo "Spring Boot started successfully."
               exit 0
             fi
+
             echo "Waiting for backend app... ($i/60)"
             sleep 2
           done
