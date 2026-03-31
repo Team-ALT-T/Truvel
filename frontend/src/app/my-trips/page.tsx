@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Image from 'next/image'
 import styled from 'styled-components'
@@ -31,8 +31,38 @@ const MyTripsPage = () => {
   const router = useRouter()
   const { data: travelPlans, isLoading, error } = useTravelPlans()
 
+  // SSR(서버)에서 렌더링된 값과 CSR(브라우저)에서 렌더링된 값이
+  // 시간/타임존 차이로 달라지면 hydration 경고가 발생할 수 있습니다.
+  // 아래 mounted 전에는 "오늘(today)" 기반 계산을 하지 않아 DOM 불일치를 막습니다.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // 날짜 포맷팅 함수
+  const parseDateOnlyToUTCms = (dateString: string): number => {
+    // 'YYYY-MM-DD' 또는 ISO 문자열(앞 10자리)을 날짜 단위로만 파싱합니다.
+    // 이렇게 해야 서버/브라우저 타임존 차이로 날짜가 하루 밀리는 문제를 줄일 수 있어요.
+    const datePart = dateString.slice(0, 10)
+    const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (match) {
+      const [, y, m, d] = match
+      return Date.UTC(Number(y), Number(m) - 1, Number(d))
+    }
+
+    // 포맷을 보장할 수 없을 때만 fallback으로 Date를 사용합니다.
+    const date = new Date(dateString)
+    return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  }
+
   const formatDate = (dateString: string): string => {
+    const datePart = dateString.slice(0, 10)
+    const match = datePart.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+    if (match) {
+      const [, y, m, d] = match
+      return `${y}.${m}.${d}`
+    }
+
     const date = new Date(dateString)
     const month = String(date.getMonth() + 1).padStart(2, '0')
     const day = String(date.getDate()).padStart(2, '0')
@@ -49,12 +79,13 @@ const MyTripsPage = () => {
 
   // 남은 일수 계산 함수
   const calculateDaysLeft = (endDate: string): string => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    const end = new Date(endDate)
-    end.setHours(0, 0, 0, 0)
-    const diffTime = end.getTime() - today.getTime()
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    // hydration 전에는 "오늘" 기반 값이 서버/브라우저에서 달라질 수 있으므로 비웁니다.
+    if (!mounted) return ''
+
+    const now = new Date()
+    const todayUTCms = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+    const endUTCms = parseDateOnlyToUTCms(endDate)
+    const diffDays = Math.ceil((endUTCms - todayUTCms) / (1000 * 60 * 60 * 24))
     
     if (diffDays < 0) return ''
     if (diffDays === 0) return '오늘 출발이에요!'
@@ -74,12 +105,17 @@ const MyTripsPage = () => {
       peopleCount: 1, // TODO: 실제 참여자 수 연동 필요
       travelPlanId: plan.travelPlanId,
     }))
-  }, [travelPlans])
+  }, [travelPlans, mounted])
 
   // 예정된 여행과 지난 여행 구분
   const { upcomingTrips, pastTrips } = useMemo(() => {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    // mounted 전에는 오늘 값이 서버/브라우저에서 달라질 수 있으니 고정합니다.
+    const todayUTCms = mounted
+      ? (() => {
+          const now = new Date()
+          return Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
+        })()
+      : 0
 
     const upcoming: Trip[] = []
     const past: Trip[] = []
@@ -90,10 +126,8 @@ const MyTripsPage = () => {
       const plan = travelPlans.find((p) => p.travelPlanId === trip.travelPlanId)
       if (!plan) return
 
-      const endDate = new Date(plan.endDate)
-      endDate.setHours(0, 0, 0, 0)
-
-      if (endDate >= today) {
+      const endUTCms = parseDateOnlyToUTCms(plan.endDate)
+      if (endUTCms >= todayUTCms) {
         upcoming.push(trip)
       } else {
         past.push(trip)
@@ -101,7 +135,7 @@ const MyTripsPage = () => {
     })
 
     return { upcomingTrips: upcoming, pastTrips: past }
-  }, [trips, travelPlans])
+  }, [trips, travelPlans, mounted])
 
   const handlePopularClick = () => {
     router.push('my-trips/popular')
@@ -110,18 +144,18 @@ const MyTripsPage = () => {
   // 오늘 날짜와 겹치는 여행 찾기
   const findTodayOverlappingTrip = (): number | null => {
     if (!travelPlans) return null
+
+    if (!mounted) return null
     
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const now = new Date()
+    const todayUTCms = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate())
     
     // 오늘 날짜가 startDate와 endDate 사이에 있는 여행 찾기
     for (const plan of travelPlans) {
-      const startDate = new Date(plan.startDate)
-      startDate.setHours(0, 0, 0, 0)
-      const endDate = new Date(plan.endDate)
-      endDate.setHours(0, 0, 0, 0)
+      const startUTCms = parseDateOnlyToUTCms(plan.startDate)
+      const endUTCms = parseDateOnlyToUTCms(plan.endDate)
       
-      if (today >= startDate && today <= endDate) {
+      if (todayUTCms >= startUTCms && todayUTCms <= endUTCms) {
         return plan.travelPlanId
       }
     }
