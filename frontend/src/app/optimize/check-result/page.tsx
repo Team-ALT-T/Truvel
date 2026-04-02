@@ -8,6 +8,7 @@ import dynamic from 'next/dynamic';
 import RouteMapComponent from '../result/components/RouteMapComponent';
 import { createTravelPlan, createDaySchedule, type TravelPlanRequest, type DayScheduleRequest, type ScheduleRequest } from '@/lib/api/travel';
 import { saveLocations, type LocationSaveRequest } from '@/lib/api/location';
+import { travelQueries } from '@/lib/queries/travelQueries';
 import { useQueryClient } from '@tanstack/react-query';
 
 // TypeScript 인터페이스 정의
@@ -501,7 +502,7 @@ const TravelItineraryApp: React.FC = () => {
         }
 
         // 4. 여행 목록 새로고침
-        queryClient.invalidateQueries({ queryKey: ['travelPlans'] });
+        queryClient.invalidateQueries({ queryKey: travelQueries.plans().queryKey });
 
         // 5. 성공 메시지 및 페이지 이동
         alert('여행 일정이 등록되었습니다!');
@@ -518,7 +519,7 @@ const TravelItineraryApp: React.FC = () => {
         alert(`일정 생성에 실패했습니다.\n\n에러: ${errorMessage}\n\n여행 계획은 생성되었지만 일정이 저장되지 않았습니다. 다시 시도해주세요.`);
         
         // 여행 목록은 새로고침 (부분 성공 상태)
-        queryClient.invalidateQueries({ queryKey: ['travelPlans'] });
+        queryClient.invalidateQueries({ queryKey: travelQueries.plans().queryKey });
         throw scheduleError; // 상위 catch로 전달
       }
     } catch (error: any) {

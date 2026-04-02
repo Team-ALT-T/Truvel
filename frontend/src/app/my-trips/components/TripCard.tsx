@@ -4,6 +4,8 @@ import React from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import styled from 'styled-components'
+import { useQueryClient } from '@tanstack/react-query'
+import { travelQueries } from '@/lib/queries/travelQueries'
 
 interface TripCardProps {
   title: string
@@ -25,9 +27,12 @@ export default function TripCard({
   travelPlanId,
 }: TripCardProps) {
   const router = useRouter()
+  const queryClient = useQueryClient()
 
   const handleClick = () => {
     if (travelPlanId) {
+      // 상세 페이지 진입 전에 해당 여행 정보를 미리 가져와 캐시를 데워 둔다.
+      queryClient.prefetchQuery(travelQueries.plan(travelPlanId))
       router.push(`/mytripdetail?id=${travelPlanId}`)
     } else {
       // fallback: travelPlanId가 없을 경우 (하위 호환성)
