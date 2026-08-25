@@ -12,7 +12,8 @@
     "test:ui": "vitest --ui",
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
-    "e2e:ui": "playwright test --ui"
+    "e2e:ui": "playwright test --ui",
+    "measure:popular": "playwright test tests/measurements/popular-rendering.spec.ts --workers=1"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
