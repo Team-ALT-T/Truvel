@@ -18,7 +18,7 @@ const GoogleMapComponent = dynamic(
 
 // RouteMapComponent도 dynamic import로 로드 (SSR 방지 및 API 로딩 대기)
 const RouteMapComponent = dynamic(
-  () => import('@/app/optimize/result/components/RouteMapComponent'),
+  () => import('../../optimize/result/components/RouteMapComponent'),
   { 
     ssr: false, 
     loading: () => (
@@ -1321,4 +1321,3 @@ const ArrowRightIcon = () => (
     <path d="M13 6l6 6-6 6" stroke="#1C1C1C" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 );
-
