@@ -3,10 +3,12 @@ package alt_t.truvel.auth.config;
 import alt_t.truvel.auth.JwtAuthenticationFilter;
 import alt_t.truvel.auth.jwt.JwtProvider;
 import lombok.RequiredArgsConstructor;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -79,6 +81,7 @@ public class SecurityConfig {
                                         // 5. 이메일 인증 기능은 허용
                                         .requestMatchers("/emails/**").permitAll()
                                         .requestMatchers("/error").permitAll()
+                                        .requestMatchers(HttpMethod.GET, "/public/countries", "/public/cities").permitAll()
 //                                .requestMatchers("/swagger-ui.html").permitAll() // swagger-ui.html 직접 접근 시
                                         // 5. 조회 API는 비로그인 유저도 접근 가능 (예시)
 //                                .requestMatchers(HttpMethod.GET, "/api/post/**").permitAll()
@@ -93,6 +96,9 @@ public class SecurityConfig {
 
                                         .anyRequest().authenticated() // 그 외 모든 요청 인증 처리
                 )
+                .exceptionHandling(exceptionHandling -> exceptionHandling
+                        .authenticationEntryPoint((request, response, authException) ->
+                                response.sendError(HttpServletResponse.SC_UNAUTHORIZED)))
                 // JWT 인증을 위한 필터 추가 (UsernamePasswordAuthenticationFilter 이전에 실행)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 

@@ -38,18 +38,27 @@ class LocationServiceUnitTest {
         // given
         String query = "서울타워";
         List<GooglePlaceResultDto> mockResults = List.of(
-                new GooglePlaceResultDto("서울타워", 37.5512f, 126.9882f, "서울특별시 용산구 남산공원길 105")
+                new GooglePlaceResultDto(
+                        "서울타워",
+                        37.5512f,
+                        126.9882f,
+                        "서울특별시 용산구 남산공원길 105",
+                        null,
+                        null,
+                        List.of(),
+                        null,
+                        null)
         );
 
-        when(googlePlaceClient.search(query)).thenReturn(mockResults);
+        when(googlePlaceClient.search(query, null, null)).thenReturn(mockResults);
 
         // when
-        List<GooglePlaceResultDto> result = locationService.searchPlaces(query);
+        List<GooglePlaceResultDto> result = locationService.searchPlaces(query, null, null);
 
         // then
         assertThat(result).hasSize(1);
         assertThat(result.get(0).name()).isEqualTo("서울타워");
-        verify(googlePlaceClient).search(query);
+        verify(googlePlaceClient).search(query, null, null);
     }
 
     @Test
@@ -74,8 +83,8 @@ class LocationServiceUnitTest {
         assertThat(result).hasSize(1);
         assertThat(result.get(0).getLocationId()).isEqualTo(1L);
         assertThat(result.get(0).getPlace()).isEqualTo("서울타워");
-        assertThat(result.get(0).getLatitude()).isEqualTo(37.5512f);
-        assertThat(result.get(0).getLongitude()).isEqualTo(126.9882f);
+        assertThat(result.get(0).getLatitude()).isEqualTo(37.5512);
+        assertThat(result.get(0).getLongitude()).isEqualTo(126.9882);
         assertThat(result.get(0).getAddress()).isEqualTo("서울특별시 용산구 남산공원길 105");
     }
 }
