@@ -57,10 +57,19 @@ class LocationControllerTest {
         // given
         String query = "서울타워";
         List<GooglePlaceResultDto> mockResults = List.of(
-                new GooglePlaceResultDto("서울타워", 37.5512f, 126.9882f, "서울특별시 용산구 남산공원길 105")
+                new GooglePlaceResultDto(
+                        "서울타워",
+                        37.5512f,
+                        126.9882f,
+                        "서울특별시 용산구 남산공원길 105",
+                        null,
+                        null,
+                        List.of(),
+                        null,
+                        null)
         );
 
-        when(locationService.searchPlaces(query)).thenReturn(mockResults);
+        when(locationService.searchPlaces(query, null, null)).thenReturn(mockResults);
 
         // when & then
         mockMvc.perform(get("/locations/search")
