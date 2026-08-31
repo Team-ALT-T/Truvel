@@ -27,7 +27,7 @@ export const handlers = [
     // 그 외는 401 에러
     return HttpResponse.json(
       { message: "이메일 또는 비밀번호가 올바르지 않습니다." },
-      { status: 401 }
+      { status: 401 },
     );
   }),
 
@@ -39,7 +39,7 @@ export const handlers = [
     if (body.email === "duplicate@example.com") {
       return HttpResponse.json(
         { message: "이미 사용 중인 이메일입니다." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -47,7 +47,7 @@ export const handlers = [
     if (body.nickname === "중복닉네임") {
       return HttpResponse.json(
         { message: "이미 사용 중인 닉네임입니다." },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -79,7 +79,7 @@ export const handlers = [
 
     return HttpResponse.json(
       { message: "인증코드가 올바르지 않습니다." },
-      { status: 400 }
+      { status: 400 },
     );
   }),
 
@@ -110,6 +110,26 @@ export const handlers = [
       { countryId: 2, koreanName: "프랑스", englishName: "France" },
       { countryId: 3, koreanName: "대한민국", englishName: "South Korea" },
     ]);
+  }),
+
+  // ─── 공개 도시 조회 (인기도 집계 없음) ─────────────────────
+  http.get(`${BASE_URL}/public/cities`, ({ request }) => {
+    const url = new URL(request.url);
+    const countryId = url.searchParams.get("countryId");
+    const allCities = [
+      { cityId: 10, countryId: 1, korean: "도쿄", english: "Tokyo" },
+      { cityId: 11, countryId: 1, korean: "오사카", english: "Osaka" },
+      { cityId: 20, countryId: 2, korean: "파리", english: "Paris" },
+      { cityId: 21, countryId: 2, korean: "바르셀로나", english: "Barcelona" },
+      { cityId: 30, countryId: 3, korean: "서울", english: "Seoul" },
+      { cityId: 31, countryId: 3, korean: "제주", english: "Jeju" },
+    ];
+
+    return HttpResponse.json(
+      countryId
+        ? allCities.filter((city) => city.countryId === Number(countryId))
+        : allCities,
+    );
   }),
 
   // ─── 여행 계획 단건 조회 ────────────────────────────────────
@@ -178,7 +198,7 @@ export const handlers = [
 
     if (countryId) {
       return HttpResponse.json(
-        allCities.filter((c) => c.countryId === Number(countryId))
+        allCities.filter((c) => c.countryId === Number(countryId)),
       );
     }
     return HttpResponse.json(allCities);

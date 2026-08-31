@@ -17,7 +17,7 @@ const PHASE = process.env.MEASUREMENT_PHASE ?? "before";
 const RUN_COUNT = 5;
 
 type ApiResponseMetric = {
-  path: "/countries" | "/cities";
+  path: "/countries" | "/cities" | "/public/countries" | "/public/cities";
   status: number;
   bodyBytes: number;
 };
@@ -38,7 +38,12 @@ type RunResult = {
 
 function isLocationApiRequest(request: Request) {
   const pathname = new URL(request.url()).pathname;
-  return pathname === "/countries" || pathname === "/cities";
+  return (
+    pathname === "/countries" ||
+    pathname === "/cities" ||
+    pathname === "/public/countries" ||
+    pathname === "/public/cities"
+  );
 }
 
 function isPopularRscResponse(response: Response) {
@@ -126,7 +131,10 @@ test.describe("popular rendering measurement", () => {
           const url = new URL(request.url);
           const pathname = url.pathname;
           const isLocationApi =
-            pathname === "/countries" || pathname === "/cities";
+            pathname === "/countries" ||
+            pathname === "/cities" ||
+            pathname === "/public/countries" ||
+            pathname === "/public/cities";
           const isLocationApiGet = isLocationApi && request.method === "GET";
           const isPopularRsc =
             pathname === "/my-trips/popular" && url.searchParams.has("_rsc");
@@ -169,9 +177,8 @@ test.describe("popular rendering measurement", () => {
               response
                 .body()
                 .then((body) => {
-                  const pathname = new URL(response.url()).pathname as
-                    | "/countries"
-                    | "/cities";
+                  const pathname = new URL(response.url())
+                    .pathname as ApiResponseMetric["path"];
                   apiResponses.push({
                     path: pathname,
                     status: response.status(),
@@ -180,9 +187,8 @@ test.describe("popular rendering measurement", () => {
                 })
                 .catch(() => {
                   // A failed body read is recorded as zero bytes while the request count remains valid.
-                  const pathname = new URL(response.url()).pathname as
-                    | "/countries"
-                    | "/cities";
+                  const pathname = new URL(response.url())
+                    .pathname as ApiResponseMetric["path"];
                   apiResponses.push({
                     path: pathname,
                     status: response.status(),
