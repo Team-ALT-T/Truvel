@@ -256,6 +256,7 @@ jobs:
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+          SERVER_API_BASE_URL: http://localhost:8080
         run: |
           npm run dev &
           for i in {1..60}; do
@@ -275,6 +276,7 @@ jobs:
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:8080
+          SERVER_API_BASE_URL: http://localhost:8080
         run: npm run e2e -- --workers=1
 
       - name: Dump docker logs
