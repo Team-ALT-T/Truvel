@@ -214,6 +214,41 @@ describe("PopularTripsPage", () => {
 
       expect(input).toHaveValue("도쿄");
     });
+
+    it("검색하면 선택 draft를 저장하고 URL 검색 route로 이동한다", async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.click(screen.getAllByRole("button", { name: "선택" })[0]);
+      const input = screen.getByPlaceholderText("어디로 떠나시나요?");
+      await user.type(input, "도쿄");
+      await user.keyboard("{Enter}");
+
+      expect(mockPush).toHaveBeenCalledWith(
+        "/my-trips/popular/search?keyword=%EB%8F%84%EC%BF%84",
+      );
+      expect(
+        JSON.parse(
+          sessionStorage.getItem("popularTripsSelectedCitiesDraft") ?? "[]",
+        ),
+      ).toEqual(
+        expect.arrayContaining([expect.objectContaining({ cityId: 10 })]),
+      );
+    });
+
+    it("국가를 선택한 검색은 countryId를 URL에 포함한다", async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.click(screen.getByRole("button", { name: "일본" }));
+      const input = screen.getByPlaceholderText("어디로 떠나시나요?");
+      await user.type(input, "교토");
+      await user.keyboard("{Enter}");
+
+      expect(mockPush).toHaveBeenCalledWith(
+        "/my-trips/popular/search?keyword=%EA%B5%90%ED%86%A0&countryId=1",
+      );
+    });
   });
 
   // ═══════════════════════════════════════════════════════════

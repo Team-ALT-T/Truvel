@@ -13,7 +13,9 @@
     "e2e": "playwright test",
     "e2e:headed": "playwright test --headed",
     "e2e:ui": "playwright test --ui",
-    "measure:popular": "playwright test tests/measurements/popular-rendering.spec.ts --workers=1"
+    "measure:popular": "playwright test popular-rendering.spec.ts --config=playwright.measurement.config.ts --workers=1",
+    "measure:popular-search-before": "playwright test popular-search-before.spec.ts --config=playwright.measurement.config.ts --workers=1",
+    "measure:popular-search-after": "playwright test popular-search-after.spec.ts --config=playwright.measurement.config.ts --workers=1"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.8",
