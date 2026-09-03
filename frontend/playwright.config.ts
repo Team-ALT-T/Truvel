@@ -10,6 +10,7 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests",
+  testIgnore: "**/measurements/**",
 
   /* 테스트 타임아웃: 각 테스트당 30초 */
   timeout: 30_000,

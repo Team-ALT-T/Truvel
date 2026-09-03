@@ -5,27 +5,21 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import styled from "styled-components";
 import { useQuery } from "@tanstack/react-query";
-import { useCities } from "@/lib/hooks/useSearch";
 import type {
   CitySearchResponse,
   CountrySearchResponse,
 } from "@/lib/api/search";
 import { publicLocationQueries } from "@/lib/queries/publicLocationQueries";
-
-type City = {
-  id: string; // cityId를 문자열로 변환
-  cityId: number; // 실제 cityId
-  countryId: number;
-  name: string;
-  subtitle?: string;
-  image?: string;
-};
+import CitySelectionList from "./components/CitySelectionList";
+import SelectedCitiesAction from "./components/SelectedCitiesAction";
+import type { SelectableCity } from "./types";
+import { useSelectedCitiesDraft } from "./useSelectedCitiesDraft";
 
 type CountrySection = {
   id: string; // countryId를 문자열로 변환
   countryId: number; // 실제 countryId
   country: string;
-  cities: City[];
+  cities: SelectableCity[];
 };
 
 const TAB_OPTIONS = ["해외 여행지", "국내 여행지"] as const;
@@ -51,21 +45,28 @@ export default function PopularTripsClient({
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabKey>("해외 여행지");
   const [query, setQuery] = useState("");
-  const [searchQuery, setSearchQuery] = useState(""); // 실제 검색에 사용되는 쿼리 (엔터 키 또는 검색 아이콘 클릭 시)
   const [selectedCountryId, setSelectedCountryId] = useState<number | null>(
     null,
   ); // 선택된 국가 ID
-  const [selectedCities, setSelectedCities] = useState<City[]>([]);
+  const {
+    selectedCities,
+    selectedCityIds,
+    toggleCity,
+    clearSelected,
+    persistDraft,
+    prepareSchedule,
+  } = useSelectedCitiesDraft();
 
-  // 검색 실행 함수
   const handleSearch = () => {
-    setSearchQuery(query.trim());
-    if (query.trim()) {
-      setSelectedCountryId(null);
-    } else {
-      // 검색어가 비어있으면 전체 목록 표시
-      setSelectedCountryId(null);
+    const keyword = query.trim();
+    if (!keyword) return;
+
+    persistDraft();
+    const params = new URLSearchParams({ keyword });
+    if (selectedCountryId !== null) {
+      params.set("countryId", String(selectedCountryId));
     }
+    router.push(`/my-trips/popular/search?${params.toString()}`);
   };
 
   const countries = initialCountries;
@@ -101,16 +102,6 @@ export default function PopularTripsClient({
     return undefined;
   }, [selectedCountryId, activeTab, koreaCountryId]);
 
-  const normalizedSearchQuery = searchQuery.trim();
-  const isSearching = normalizedSearchQuery.length > 0;
-
-  // 기존 인증 검색 API는 유지하되 검색을 실행했을 때만 호출한다.
-  const { data: searchedCities, isLoading: searchLoading } = useCities(
-    cityCountryId,
-    normalizedSearchQuery || undefined,
-    isSearching,
-  );
-
   // 최초 화면은 ISR props를 쓰고, 국가를 고른 뒤에만 공개 API를 조회한다.
   const {
     data: countryCities,
@@ -118,14 +109,10 @@ export default function PopularTripsClient({
     isError: countryCitiesError,
   } = useQuery({
     ...publicLocationQueries.cities(cityCountryId),
-    enabled: !isSearching && cityCountryId !== undefined,
+    enabled: cityCountryId !== undefined,
   });
 
-  const allCities = isSearching
-    ? searchedCities
-    : cityCountryId !== undefined
-      ? countryCities
-      : initialCities;
+  const allCities = cityCountryId !== undefined ? countryCities : initialCities;
 
   // 국가별로 그룹화된 섹션 생성
   const sections = useMemo<CountrySection[]>(() => {
@@ -174,7 +161,6 @@ export default function PopularTripsClient({
           .filter((city) => city.korean) // korean이 없는 도시 제외
           .sort((a, b) => a.korean.localeCompare(b.korean)) // 도시명 정렬
           .map((city) => ({
-            id: String(city.cityId),
             cityId: city.cityId,
             countryId: city.countryId,
             name: city.korean,
@@ -184,13 +170,12 @@ export default function PopularTripsClient({
   }, [countries, allCities, activeTab, selectedCountryId]);
 
   // 인기 여행지 (검색어와 관계없이 항상 표시)
-  const popularSpots = useMemo<City[]>(() => {
+  const popularSpots = useMemo<SelectableCity[]>(() => {
     // 인기 도시명에 해당하는 도시들을 찾아서 반환
     const popularCities = initialCities
       .filter((city) => POPULAR_CITY_NAMES.includes(city.korean))
       .slice(0, 6)
       .map((city) => ({
-        id: String(city.cityId),
         cityId: city.cityId,
         countryId: city.countryId,
         name: city.korean,
@@ -207,22 +192,7 @@ export default function PopularTripsClient({
     });
   }, [initialCities]);
 
-  const onSelectCity = (city: City) => {
-    setSelectedCities((prev) => {
-      const exists = prev.some((selectedCity) => selectedCity.id === city.id);
-      if (exists)
-        return prev.filter((selectedCity) => selectedCity.id !== city.id);
-      return [...prev, city];
-    });
-  };
-
-  const clearSelected = () => setSelectedCities([]);
-  const selectedCityIds = useMemo(
-    () => new Set(selectedCities.map((city) => city.id)),
-    [selectedCities],
-  );
-
-  const isLoading = isSearching ? searchLoading : countryCitiesLoading;
+  const isLoading = countryCitiesLoading;
 
   if (isLoading) {
     return (
@@ -266,7 +236,7 @@ export default function PopularTripsClient({
 
         <PopularRow>
           {popularSpots.map((spot) => (
-            <PopularItem key={spot.id} onClick={() => onSelectCity(spot)}>
+            <PopularItem key={spot.cityId} onClick={() => toggleCity(spot)}>
               <PopularThumb>
                 <Image
                   src={spot.image || "/icons/blank.png"}
@@ -289,7 +259,6 @@ export default function PopularTripsClient({
                 setActiveTab(tab);
                 setSelectedCountryId(null); // 탭 변경 시 선택된 국가 초기화
                 setQuery(""); // 검색어도 초기화
-                setSearchQuery(""); // 검색 쿼리도 초기화
               }}
             >
               {tab}
@@ -299,10 +268,9 @@ export default function PopularTripsClient({
 
         <CategoryChips>
           <Chip
-            $active={selectedCountryId === null && !searchQuery}
+            $active={selectedCountryId === null}
             onClick={() => {
               setQuery("");
-              setSearchQuery("");
               setSelectedCountryId(null);
             }}
           >
@@ -314,7 +282,6 @@ export default function PopularTripsClient({
               $active={selectedCountryId === country.countryId}
               onClick={() => {
                 setQuery("");
-                setSearchQuery("");
                 setSelectedCountryId(country.countryId);
               }}
             >
@@ -324,7 +291,7 @@ export default function PopularTripsClient({
         </CategoryChips>
 
         <Sections>
-          {countryCitiesError && !isSearching ? (
+          {countryCitiesError ? (
             <EmptyMessage>
               도시 목록을 불러오지 못했습니다. 다시 시도해주세요.
             </EmptyMessage>
@@ -332,32 +299,11 @@ export default function PopularTripsClient({
             sections.map((sec) => (
               <Section key={sec.id}>
                 <SectionTitle>{sec.country}</SectionTitle>
-                <CityList>
-                  {sec.cities.map((city) => (
-                    <CityRow key={city.id}>
-                      <CityMeta>
-                        <CityThumb>
-                          <Image
-                            src={city.image || "/icons/blank.png"}
-                            alt={city.name}
-                            fill
-                            sizes="48px"
-                          />
-                        </CityThumb>
-                        <CityText>
-                          <CityName>{city.name}</CityName>
-                          {city.subtitle && <CitySub>{city.subtitle}</CitySub>}
-                        </CityText>
-                      </CityMeta>
-                      <SelectButton
-                        onClick={() => onSelectCity(city)}
-                        $active={selectedCityIds.has(city.id)}
-                      >
-                        선택
-                      </SelectButton>
-                    </CityRow>
-                  ))}
-                </CityList>
+                <CitySelectionList
+                  cities={sec.cities}
+                  selectedCityIds={selectedCityIds}
+                  onSelect={toggleCity}
+                />
               </Section>
             ))
           ) : !isLoading ? (
@@ -365,43 +311,15 @@ export default function PopularTripsClient({
           ) : null}
         </Sections>
 
-        {selectedCities.length > 0 && (
-          <BottomActionSection>
-            <SelectedPlacesList>
-              {selectedCities.map((city) => (
-                <SelectedPlaceItem key={city.id}>
-                  <PlaceThumbnail src="/icons/blank.png" alt={city.name} />
-                  <PlaceLabel>{city.name}</PlaceLabel>
-                  <RemoveButton onClick={() => onSelectCity(city)}>
-                    ✕
-                  </RemoveButton>
-                </SelectedPlaceItem>
-              ))}
-              <EditButton onClick={clearSelected}>편집</EditButton>
-            </SelectedPlacesList>
-            <AddButton
-              onClick={() => {
-                // 선택한 도시 정보를 localStorage에 저장하거나 쿼리 파라미터로 전달
-                const selectedCityData = selectedCities.map((city) => ({
-                  cityId: city.cityId,
-                  countryId: city.countryId,
-                  name: city.name,
-                }));
-
-                // schedule 페이지로 이동 (나중에 연동 시 사용)
-                if (typeof window !== "undefined") {
-                  sessionStorage.setItem(
-                    "selectedCities",
-                    JSON.stringify(selectedCityData),
-                  );
-                }
-                router.push("/schedule");
-              }}
-            >
-              선택 완료
-            </AddButton>
-          </BottomActionSection>
-        )}
+        <SelectedCitiesAction
+          cities={selectedCities}
+          onToggle={toggleCity}
+          onClear={clearSelected}
+          onComplete={() => {
+            prepareSchedule();
+            router.push("/schedule");
+          }}
+        />
       </Inner>
     </PageContainer>
   );
@@ -549,172 +467,6 @@ const SectionTitle = styled.h3`
   font-weight: 700;
   color: #1c1c1c;
   margin-bottom: 0.5rem;
-`;
-
-const CityList = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-`;
-
-const CityRow = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.25rem;
-`;
-
-const CityMeta = styled.div`
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-`;
-
-const CityThumb = styled.div`
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  overflow: hidden;
-  background: #eaeaea;
-`;
-
-const CityText = styled.div`
-  display: flex;
-  flex-direction: column;
-`;
-
-const CityName = styled.div`
-  font-size: 14px;
-  color: #1c1c1c;
-  font-weight: 700;
-`;
-
-const CitySub = styled.div`
-  font-size: 12px;
-  color: #8b8b8b;
-`;
-
-const SelectButton = styled.button<{ $active?: boolean }>`
-  padding: 0.5rem 0.75rem;
-  border-radius: 30px;
-  background: ${({ $active }) => ($active ? "#E8F1FF" : "#f4f6f8")};
-  color: #1c1c1c;
-  border: 1px solid ${({ $active }) => ($active ? "#3CA6FF" : "#e6e6e6")};
-  font-weight: 700;
-  font-size: 12px;
-  min-width: 64px;
-`;
-
-const BottomActionSection = styled.div`
-  position: fixed;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  max-width: 800px;
-  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
-  background: white;
-  border-top: 1px solid #e9ecef;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.08);
-`;
-
-const SelectedPlacesList = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  overflow-x: auto;
-  padding-bottom: 11px;
-  margin-bottom: 11px;
-`;
-
-const SelectedPlaceItem = styled.div`
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  position: relative;
-  flex-shrink: 0;
-  padding-top: 5px;
-`;
-
-const PlaceThumbnail = styled.img`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-`;
-
-const PlaceLabel = styled.div`
-  font-size: 12px;
-  font-weight: 500;
-  color: #666;
-  text-align: center;
-  white-space: nowrap;
-`;
-
-const AddButton = styled.button`
-  width: 100%;
-  max-width: 560px;
-  padding: 18px 0;
-  background: #3ca6ff;
-  color: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  border: none;
-  border-radius: 16px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  margin: 11px auto 0 auto;
-  display: block;
-
-  &:hover {
-    background: #3295e6;
-  }
-  &:active {
-    background: #2884cc;
-  }
-`;
-
-const RemoveButton = styled.button`
-  position: absolute;
-  top: 1px;
-  right: -4px;
-  background: #ff4757;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 18px;
-  height: 18px;
-  font-size: 10px;
-  line-height: 1;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  transition: all 0.2s ease;
-`;
-
-const EditButton = styled.div`
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #f8f9fa;
-  color: #666;
-  font-size: 11px;
-  font-weight: 500;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  flex-shrink: 0;
-  border: 1px solid #e9ecef;
-  cursor: pointer;
-  transition: all 0.2s ease;
 `;
 
 const LoadingMessage = styled.p`
